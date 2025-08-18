@@ -28,7 +28,7 @@ int main(void) {
 
     // Leaderboard Window
     int leaderboard_h = 4;
-    int leaderboard_w = 55;
+    int leaderboard_w = 45;
     int leaderboard_y = 1;
     int leaderboard_x = (xMax - leaderboard_w) / 2;
     WINDOW *leaderboard_win = newwin(leaderboard_h, leaderboard_w, leaderboard_y, leaderboard_x);

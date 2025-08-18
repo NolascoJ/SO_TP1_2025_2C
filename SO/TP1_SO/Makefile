@@ -6,7 +6,7 @@ LDLIBS := -lncurses
 
 SRC := ./view/view.c
 BIN_DIR := bin
-BIN := $(BIN_DIR)
+BIN := $(BIN_DIR)/view
 
 .PHONY: all clean
 
@@ -20,4 +20,4 @@ $(BIN_DIR):
 
 # Borra la carpeta bin por completo
 clean:
-	rm -rf $(BIN)
+	rm -r $(BIN)
