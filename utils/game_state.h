@@ -13,15 +13,15 @@ typedef struct {
     unsigned short y_coord;     
     pid_t pid;              
     bool is_blocked;        
-} Player;
+} player_t;
 
 typedef struct {
     unsigned short width;   
     unsigned short height;  
     unsigned int player_count; 
-    Player players[9];      
+    player_t players[9];      
     bool game_over;         
     int board_data[];       
-} GameState;
+} game_state_t;
 
 #endif
