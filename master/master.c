@@ -24,9 +24,23 @@ int main() {
     printf("Máster: Memoria /game_state creada y mapeada.\n");
     game_state_ptr->player_count = 2;
 
+// fork = 0 ->child
+// fork > 0 -> parent
+// fork < 0 -> error
+
     if (fork() == 0) {
         char* argv[] = {"view", NULL};
-        execve("/root/bin/view", argv, NULL);
+        execve("./bin/view", argv, NULL);
+        perror("execve");
+        exit(1);
+    }else{
+        waitpid(-1, NULL, 0);
+    }
+
+    // Create player process
+    if (fork() == 0) {
+        char* argv[] = {"player", NULL};
+        execve("./bin/player", argv, NULL);
         perror("execve");
         exit(1);
     }else{
