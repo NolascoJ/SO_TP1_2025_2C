@@ -60,3 +60,62 @@ man shm_open
 docker images
 eixt
 exit
+make clean all
+./bin/master 
+make clean all
+./bin/master 
+make clean all
+make clean all
+./bin/master 
+make clean all
+./bin/master 
+./bin/master 
+make clean && make
+./bin/master
+make clean && make
+./master/ChompChamps 
+./master/ChompChamps -p 
+man sem_t
+make clean all
+make clean all
+make clean all
+make clean all
+make clean all
+make clean all
+make clean all
+make clean all
+make clean all
+make clean all
+./bin/master -w 10 -h 15
+make clean all
+./bin/master -w 10 -h 15
+./bin/master -w 10 -h 18
+make clean all
+make clean all
+./bin/master -w 10 -h 15
+./bin/master -w 90 -h 15
+make clean all
+make clean all
+./bin/master -w 20 -h 15
+./bin/master -w 5 -h 7
+make clean all
+
+./bin/master -w 5 -h 7
+./bin/master -w 5 -h 7
+./bin/master -w 5 -h 7
+make clean all
+./bin/master -w 7  -h 7
+./bin/master -w 7  -h 7
+git branch
+git add .
+git commit "vista y recibir parametros funcional"
+git commit -m "vista y recibir parametros funcional"
+git push
+exit
+make clean all
+./bin/master -w 7  -h 7
+make clean all
+make clean all
+make clean all
+make clean all
+exit

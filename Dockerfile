@@ -4,7 +4,7 @@ FROM --platform=linux/amd64 agodio/itba-so-multi-platform:3.0
 # Evitar prompts interactivos
 ARG DEBIAN_FRONTEND=noninteractive
 
-# 1) Instala dependencias necesarias + libncurses-dev
+# 1) Instala dependencias necesarias + libncurses-dev + valgrind
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libncurses-dev \
@@ -13,7 +13,8 @@ RUN apt-get update && \
         gnupg \
         strace \
         build-essential \
-        cmake && \
+        cmake \
+        valgrind && \
     rm -rf /var/lib/apt/lists/*
 
 # 2) Agrega el repo oficial de PVS-Studio e instala

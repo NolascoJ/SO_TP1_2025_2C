@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stddef.h> 
+#include <stddef.h>
 
 // Inicializa la memoria compartida: la crea, le da un tamaño y la mapea.
 // Retorna un puntero al segmento de memoria o NULL en caso de error.

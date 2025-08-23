@@ -1,4 +1,6 @@
+#define _XOPEN_SOURCE 500
 #include "shm.h"
+
 
 void* shm_init(const char *name, size_t size, int *shm_fd_out, int mode) {
     mode_t permissions = (mode == O_RDWR) ? 0666 : 0444;

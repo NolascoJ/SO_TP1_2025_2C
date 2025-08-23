@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -9,6 +10,7 @@
 #include "../shared_memory/shm.h"
 
 extern char **environ;
+void init_board(game_state_t* game_state_ptr);
 
 int main(int argc, char *argv[]) {
     printf("Proceso Máster iniciado.\n");
@@ -35,16 +37,12 @@ int main(int argc, char *argv[]) {
     const size_t shm_state_size = sizeof(game_state_t) + ((size_t)width * (size_t)height * sizeof(int)); 
 
     game_state_ptr = (game_state_t*)shm_init("/game_state", shm_state_size, &game_state_fd, O_RDWR);
-    if (game_state_ptr == NULL) {
-        perror("Fallo al inicializar la memoria de estado.");
-        return 1;
-    }
+    
     printf("Máster: Memoria /game_state creada y mapeada.\n");
     game_state_ptr->player_count = player_count;
     game_state_ptr->width = (unsigned short)width;
     game_state_ptr->height = (unsigned short)height;
     
-    // Initialize board data with sample values
 
 init_board(game_state_ptr);
 
