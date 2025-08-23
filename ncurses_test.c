@@ -1,48 +1,22 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <semaphore.h>
 #include <ncurses.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 // Hay que correr esto cuando se inicia el contenedor para poder correr ncurses
 //  apt-get update && apt-get install -y libncurses-dev
 
-#include "../utils/game_state.h"
-#include "../shared_memory/shm.h"
 
-
-void print_matrix(WINDOW *win, int yMax, int xMax, game_state_t* game_state) {
+void print_matrix(WINDOW *win, int yMax, int xMax) {
     int col_width = 3;
-    int height = game_state->height;
-    int width = game_state->width;
-    
-    for (int i = 0; i < height && i + 1 < yMax - 1; i++) {
-        for (int j = 0; j < width && (j * col_width + 2) < xMax - 1; j++) {
-            int value = game_state->board_data[i * width + j];
-            mvwprintw(win, i + 1, j * col_width + 2, "%2d", value);
+    for (int i = 1; i < yMax - 1; i++) {
+        for (int j = 2; j < xMax - 1; j += col_width) {
+            mvwprintw(win, i, j, "%d", rand() % 10);
         }
     }
 }
 
-
-int main() {
-    printf("Proceso Vista iniciado.\n");
-
-    int game_state_fd;
-    game_state_t* game_state_ptr;
-
-    // El tamaño de la matriz se pasa aparte pq es variable
-    const size_t shm_state_size = sizeof(game_state_t) + (10 * 10 * sizeof(int)); 
-
-    game_state_ptr = (game_state_t*)shm_open_and_map("/game_state", shm_state_size, &game_state_fd, O_RDONLY);
-    if (game_state_ptr == NULL) {
-        perror("Fallo al abrir la memoria de estado.");
-        return 1;
-    }
-    printf("Vista: Conectada a /game_state.\n");
-
+int main(void) {
     initscr();            
     cbreak();             
     noecho();             
@@ -71,9 +45,8 @@ int main() {
 
 
     // Matrix Window
-    // Each number takes 3 characters width, plus borders
-    int matrix_h = game_state_ptr->height + 2;  // +2 for borders
-    int matrix_w = (game_state_ptr->width * 3) + 2;  // +2 for borders, *3 for spacing
+    int matrix_h = yMax - leaderboard_h - 2;
+    int matrix_w = xMax - 4;
     int matrix_y = leaderboard_y + leaderboard_h;
     int matrix_x = (xMax - matrix_w) / 2;
     WINDOW *win = newwin(matrix_h, matrix_w, matrix_y, matrix_x);
@@ -81,7 +54,7 @@ int main() {
     
     int yWinMax, xWinMax;
     getmaxyx(win, yWinMax, xWinMax);
-    print_matrix(win, yWinMax, xWinMax, game_state_ptr);
+    print_matrix(win, yWinMax, xWinMax);
 
     refresh();
     wrefresh(leaderboard_win);
@@ -94,11 +67,5 @@ int main() {
     delwin(win);
     curs_set(1);
     endwin();
-
-    printf("Cantidad de jugadores: %d\n", game_state_ptr->player_count);
-
-    shm_close(game_state_ptr, shm_state_size, game_state_fd);
-
-    printf("Vista: Finalizada.\n");
     return 0;
 }
