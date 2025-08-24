@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     if (argc != 3) {
         return 1;
     }
-    
+ 
     int gameWidth = atoi(argv[1]);
     int gameHeight = atoi(argv[2]);
     
@@ -41,7 +41,6 @@ int main(int argc, char* argv[]) {
     game_state_t* state = (game_state_t*)state_buffer;
 
     while (!game_state_ptr->game_over && !game_state_ptr->players[me].is_blocked) {
-        
         acquire_read_lock(game_sync_ptr, me);
 
         take_snapshot(game_state_ptr, playerList, state, gameWidth, gameHeight);
@@ -52,6 +51,8 @@ int main(int argc, char* argv[]) {
 
         printf("%d", move);
         fflush(stdout);
+
+                
 
     }
 
@@ -76,17 +77,17 @@ unsigned int getMe(game_state_t* game_state_ptr) {
             return i;
         }
     }
-    errExit("I dont exist in the board");
+    perror("I dont exist in the board");
 }
 
 void acquire_read_lock(game_sync_t* game_sync_ptr, int me) {
-    sem_wait(&game_sync_ptr->G[me]);
-    sem_wait(&game_sync_ptr->C);
-    sem_post(&game_sync_ptr->C);
-    sem_wait(&game_sync_ptr->E);
-    game_sync_ptr->F++;
+    sem_wait(&game_sync_ptr->G[me]); //semaforo por jugador
+    sem_wait(&game_sync_ptr->C); //mutex para evitar inanición del máster al acceder al estado
+    sem_post(&game_sync_ptr->C); //libero mutex
+    sem_wait(&game_sync_ptr->E);//mutex para la siguiente variable
+    game_sync_ptr->F++; //cantidad de jugadores leyendo el estado
     if (game_sync_ptr->F == 1) {
-        sem_wait(&game_sync_ptr->D);
+        sem_wait(&game_sync_ptr->D); // che, hay alguien leyendo, no cambien el estado
     }
     sem_post(&game_sync_ptr->E);
 }
@@ -95,7 +96,7 @@ void release_read_lock(game_sync_t* game_sync_ptr) {
     sem_wait(&game_sync_ptr->E);
     game_sync_ptr->F--;
     if (game_sync_ptr->F == 0) {
-        sem_post(&game_sync_ptr->D);
+        sem_post(&game_sync_ptr->D); // no hay nadie leyendo, el master puede cambiar el estado
     }
     sem_post(&game_sync_ptr->E);
 }

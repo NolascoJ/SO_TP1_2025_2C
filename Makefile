@@ -10,6 +10,8 @@ MASTER_SRC := master/master.c
 PLAYER_SRC := player/player.c
 SHM_SRC := shared_memory/shm.c
 SHM_OBJ := shared_memory/shm.o
+GAME_CONFIG_SRC := utils/game_config.c
+GAME_CONFIG_OBJ := utils/game_config.o
 
 TARGETS := $(BIN_DIR)/view $(BIN_DIR)/master $(BIN_DIR)/player
 
@@ -24,20 +26,24 @@ $(BIN_DIR):
 $(SHM_OBJ): $(SHM_SRC) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Compilar el objeto de game_config
+$(GAME_CONFIG_OBJ): $(GAME_CONFIG_SRC) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 # Vista (necesita ncurses)
 $(BIN_DIR)/view: $(VIEW_SRC) $(SHM_OBJ) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(VIEW_SRC) $(SHM_OBJ) $(NCURSES_LIB)
 
 # Máster
-$(BIN_DIR)/master: $(MASTER_SRC) $(SHM_OBJ) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $(MASTER_SRC) $(SHM_OBJ)
+$(BIN_DIR)/master: $(MASTER_SRC) $(SHM_OBJ) $(GAME_CONFIG_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $(MASTER_SRC) $(SHM_OBJ) $(GAME_CONFIG_OBJ)
 
 # Jugador
 $(BIN_DIR)/player: $(PLAYER_SRC) $(SHM_OBJ) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(PLAYER_SRC) $(SHM_OBJ)
 
 clean:
-	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) PVS-Studio.log report.tasks compile_commands.json
+	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) PVS-Studio.log report.tasks compile_commands.json
 
 # Valgrind memory leak detection
 valgrind-test: all
