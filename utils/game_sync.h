@@ -16,9 +16,4 @@ typedef struct {
     sem_t G[GAME_SYNC_MAX_PLAYERS]; /* Semáforos por jugador */
 } game_sync_t;
 
-
-int game_sync_init(game_sync_t *s);
-
-int game_sync_destroy(game_sync_t *s);
-
 #endif 

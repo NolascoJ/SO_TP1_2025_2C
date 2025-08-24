@@ -2,7 +2,8 @@
 #define GAME_STATE_H
 
 #include <stdbool.h>
-#include <unistd.h> // Para pid_t
+#include <unistd.h>
+#include <sys/types.h>
 
 typedef struct {
     char name[16];          
