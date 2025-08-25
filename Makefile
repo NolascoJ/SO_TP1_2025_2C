@@ -4,6 +4,11 @@ CC := gcc
 CFLAGS := -std=c11 -Wall -Wextra -I./shared_memory -I./utils -I./master
 NCURSES_LIB := -lncurses
 
+# Valgrind configuration
+VALGRIND := valgrind
+VG_FLAGS := --leak-check=full --show-leak-kinds=all --track-origins=yes --trace-children=yes --error-exitcode=1
+TERM ?= xterm-256color
+
 BIN_DIR := bin
 VIEW_SRC := view/view.c
 MASTER_SRC := master/master.c
@@ -57,37 +62,33 @@ $(BIN_DIR)/player: $(PLAYER_SRC) $(SHM_OBJ) | $(BIN_DIR)
 clean:
 	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) $(SETUP_OBJ) PVS-Studio.log report.tasks compile_commands.json
 
-# Valgrind memory leak detection
+# Valgrind memory leak detection (master with one player and the view)
 valgrind-test: all
-	@echo "Running Valgrind tests..."
-	@echo "=== Testing Master ==="
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=valgrind_master.log $(BIN_DIR)/master -h 5 -w 5 -p 1 &
-	@sleep 2
-	@pkill -f "$(BIN_DIR)/master" || true
-	@echo "Master Valgrind log:"
-	@cat valgrind_master.log || echo "No log file found"
-	@echo ""
-	@echo "=== Testing Player ==="
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=valgrind_player.log $(BIN_DIR)/player &
-	@sleep 1
-	@pkill -f "$(BIN_DIR)/player" || true
-	@echo "Player Valgrind log:"
-	@cat valgrind_player.log || echo "No log file found"
-	@echo ""
-	@echo "Valgrind tests completed. Check valgrind_*.log files for details."
+	@echo "Running Valgrind (master + view + 1 player)..."
+	# Use per-process logs so child processes (like view) produce their own files
+	TERM=$(TERM) $(VALGRIND) $(VG_FLAGS) --log-file=valgrind_%p.log \
+		$(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 1 -v $(BIN_DIR)/view -p $(BIN_DIR)/player
+	@echo "Valgrind logs generated (one per PID):"
+	@ls -1 valgrind_*.log || echo "No log files found"
+	@echo "Tip: grep -H "LEAK SUMMARY" valgrind_*.log"
 
 # PVS-Studio static analysis
 pvs-analysis: clean
 	@echo "Running PVS-Studio static analysis..."
-	@echo "=== Generating compilation database ==="
-	pvs-studio-analyzer trace -- make all
+	@echo "=== Capturing compiler invocations (trace) ==="
+	pvs-studio-analyzer trace -o strace_out -- make clean all
 	@echo "=== Running PVS-Studio analysis ==="
-	pvs-studio-analyzer analyze -f strace_out --output-file PVS-Studio.log
-	@echo "=== Converting results to readable format ==="
+	pvs-studio-analyzer analyze -f strace_out -C gcc -o PVS-Studio.log
+	@echo "=== Converting results to readable formats ==="
 	plog-converter -a GA:1,2 -t tasklist -o report.tasks PVS-Studio.log
+	plog-converter -a GA:1,2 -t text -o PVS-Studio.txt PVS-Studio.log
+	@echo "=== Creating component-specific views (master/view/player) ==="
+	@grep -E "/master/|\\bmaster\\.c\\b" PVS-Studio.txt > PVS-Studio-master.txt || true
+	@grep -E "/view/|\\bview\\.c\\b"     PVS-Studio.txt > PVS-Studio-view.txt   || true
+	@grep -E "/player/|\\bplayer\\.c\\b" PVS-Studio.txt > PVS-Studio-player.txt || true
 	@echo "=== Analysis complete ==="
-	@echo "Check report.tasks for analysis results"
-	@cat report.tasks || echo "No issues found or report generation failed"
+	@echo "Summary files: report.tasks, PVS-Studio.txt"
+	@echo "Per-component: PVS-Studio-master.txt, PVS-Studio-view.txt, PVS-Studio-player.txt"
 
 # Combined analysis (Valgrind + PVS-Studio)
 full-analysis: pvs-analysis valgrind-test
