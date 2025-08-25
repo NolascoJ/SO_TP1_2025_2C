@@ -1,7 +1,7 @@
 # Minimal Makefile to build the view app with ncurses
 
 CC := gcc
-CFLAGS := -std=c11 -Wall -Wextra -I./shared_memory -I./utils
+CFLAGS := -std=c11 -Wall -Wextra -I./shared_memory -I./utils -I./master
 NCURSES_LIB := -lncurses
 
 BIN_DIR := bin
@@ -12,6 +12,10 @@ SHM_SRC := shared_memory/shm.c
 SHM_OBJ := shared_memory/shm.o
 GAME_CONFIG_SRC := utils/game_config.c
 GAME_CONFIG_OBJ := utils/game_config.o
+SOCKET_UTILS_SRC := utils/socket_utils.c
+SOCKET_UTILS_OBJ := utils/socket_utils.o
+SETUP_SRC := master/setup.c
+SETUP_OBJ := master/setup.o
 
 TARGETS := $(BIN_DIR)/view $(BIN_DIR)/master $(BIN_DIR)/player
 
@@ -30,20 +34,28 @@ $(SHM_OBJ): $(SHM_SRC) | $(BIN_DIR)
 $(GAME_CONFIG_OBJ): $(GAME_CONFIG_SRC) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Compilar el objeto de socket_utils
+$(SOCKET_UTILS_OBJ): $(SOCKET_UTILS_SRC) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compilar el objeto de setup
+$(SETUP_OBJ): $(SETUP_SRC) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 # Vista (necesita ncurses)
 $(BIN_DIR)/view: $(VIEW_SRC) $(SHM_OBJ) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(VIEW_SRC) $(SHM_OBJ) $(NCURSES_LIB)
 
 # Máster
-$(BIN_DIR)/master: $(MASTER_SRC) $(SHM_OBJ) $(GAME_CONFIG_OBJ) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $(MASTER_SRC) $(SHM_OBJ) $(GAME_CONFIG_OBJ)
+$(BIN_DIR)/master: $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ)
 
 # Jugador
 $(BIN_DIR)/player: $(PLAYER_SRC) $(SHM_OBJ) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(PLAYER_SRC) $(SHM_OBJ)
 
 clean:
-	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) PVS-Studio.log report.tasks compile_commands.json
+	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) $(SETUP_OBJ) PVS-Studio.log report.tasks compile_commands.json
 
 # Valgrind memory leak detection
 valgrind-test: all

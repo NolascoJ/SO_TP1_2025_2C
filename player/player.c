@@ -49,9 +49,7 @@ int main(int argc, char* argv[]) {
         release_read_lock(game_sync_ptr);
 
         int move = getMove(playerList, state, me);
-
-        printf("%d", move);
-        fflush(stdout);
+        write(STDOUT_FILENO, &move, 1);
 
     }
 
@@ -107,5 +105,5 @@ void take_snapshot(game_state_t* game_state_ptr, player_t* playerList, game_stat
 }
 
 int getMove(player_t* playerList, game_state_t* state, int me) {
-    return 2;
+    return 6;
 }
