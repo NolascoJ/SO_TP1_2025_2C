@@ -10,6 +10,7 @@
 #include "player.h"
 
 int main(int argc, char* argv[]) {
+
     if (argc != 3) {
         return 1;
     }
@@ -52,8 +53,6 @@ int main(int argc, char* argv[]) {
         printf("%d", move);
         fflush(stdout);
 
-                
-
     }
 
     cleanup_resources(game_state_ptr, game_sync_ptr, shm_state_size, shm_sync_size, game_state_fd, game_sync_fd);
@@ -72,33 +71,34 @@ void cleanup_resources(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
 
 unsigned int getMe(game_state_t* game_state_ptr) {
     pid_t pid = getpid();
-    for (int i = 0; i < game_state_ptr->player_count; i++) {
+    for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
         if (game_state_ptr->players[i].pid == pid) {
             return i;
         }
     }
     perror("I dont exist in the board");
+    return 1;
 }
 
 void acquire_read_lock(game_sync_t* game_sync_ptr, int me) {
-    sem_wait(&game_sync_ptr->G[me]); //semaforo por jugador
-    sem_wait(&game_sync_ptr->C); //mutex para evitar inanición del máster al acceder al estado
-    sem_post(&game_sync_ptr->C); //libero mutex
-    sem_wait(&game_sync_ptr->E);//mutex para la siguiente variable
-    game_sync_ptr->F++; //cantidad de jugadores leyendo el estado
-    if (game_sync_ptr->F == 1) {
-        sem_wait(&game_sync_ptr->D); // che, hay alguien leyendo, no cambien el estado
+    sem_wait(&game_sync_ptr->player_semaphores[me]); //semaforo por jugador
+    sem_wait(&game_sync_ptr->master_mutex); //mutex para evitar inanición del máster al acceder al estado
+    sem_post(&game_sync_ptr->master_mutex); //libero mutex
+    sem_wait(&game_sync_ptr->readers_count_mutex);//mutex para la siguiente variable
+    game_sync_ptr->readers_count++; //cantidad de jugadores leyendo el estado
+    if (game_sync_ptr->readers_count == 1) {
+        sem_wait(&game_sync_ptr->game_state_mutex); // che, hay alguien leyendo, no cambien el estado
     }
-    sem_post(&game_sync_ptr->E);
+    sem_post(&game_sync_ptr->readers_count_mutex);
 }
 
 void release_read_lock(game_sync_t* game_sync_ptr) {
-    sem_wait(&game_sync_ptr->E);
-    game_sync_ptr->F--;
-    if (game_sync_ptr->F == 0) {
-        sem_post(&game_sync_ptr->D); // no hay nadie leyendo, el master puede cambiar el estado
+    sem_wait(&game_sync_ptr->readers_count_mutex);
+    game_sync_ptr->readers_count--;
+    if (game_sync_ptr->readers_count == 0) {
+        sem_post(&game_sync_ptr->game_state_mutex); // no hay nadie leyendo, el master puede cambiar el estado
     }
-    sem_post(&game_sync_ptr->E);
+    sem_post(&game_sync_ptr->readers_count_mutex);
 }
 
 void take_snapshot(game_state_t* game_state_ptr, player_t* playerList, game_state_t* state, int gameWidth, int gameHeight) {
