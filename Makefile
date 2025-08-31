@@ -12,7 +12,9 @@ TERM ?= xterm-256color
 BIN_DIR := bin
 VIEW_SRC := view/view.c
 MASTER_SRC := master/master.c
-PLAYER_SRC := player/player.c
+PLAYER_SRC := player/player1.c
+PLAYER_LIB_SRC := player/player_lib.c
+PLAYER2_SRC := player/player2.c
 SHM_SRC := shared_memory/shm.c
 SHM_OBJ := shared_memory/shm.o
 GAME_CONFIG_SRC := utils/game_config.c
@@ -22,7 +24,7 @@ SOCKET_UTILS_OBJ := utils/socket_utils.o
 SETUP_SRC := master/setup.c
 SETUP_OBJ := master/setup.o
 
-TARGETS := $(BIN_DIR)/view $(BIN_DIR)/master $(BIN_DIR)/player
+TARGETS := $(BIN_DIR)/view $(BIN_DIR)/master $(BIN_DIR)/player $(BIN_DIR)/player2
 
 .PHONY: all clean valgrind-test pvs-analysis full-analysis
 
@@ -56,8 +58,12 @@ $(BIN_DIR)/master: $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SO
 	$(CC) $(CFLAGS) -o $@ $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ)
 
 # Jugador
-$(BIN_DIR)/player: $(PLAYER_SRC) $(SHM_OBJ) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $(PLAYER_SRC) $(SHM_OBJ)
+$(BIN_DIR)/player: $(PLAYER_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $(PLAYER_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ)
+
+# Jugador variant 2
+$(BIN_DIR)/player2: $(PLAYER2_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $(PLAYER2_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ)
 
 clean:
 	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) $(SETUP_OBJ) PVS-Studio.log report.tasks compile_commands.json
