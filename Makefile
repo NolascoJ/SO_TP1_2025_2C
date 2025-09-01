@@ -26,7 +26,7 @@ SETUP_OBJ := master/setup.o
 
 TARGETS := $(BIN_DIR)/view $(BIN_DIR)/master $(BIN_DIR)/player $(BIN_DIR)/player2
 
-.PHONY: all clean valgrind-test pvs-analysis full-analysis
+.PHONY: all clean valgrind-test pvs-analysis full-analysis pvs-test valgrind-test-1p valgrind-test-2-same-p valgrind-test-2-mixed-p
 
 all: $(TARGETS)
 
@@ -66,38 +66,43 @@ $(BIN_DIR)/player2: $(PLAYER2_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(PLAYER2_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ)
 
 clean:
-	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) $(SETUP_OBJ) PVS-Studio.log report.tasks compile_commands.json
+	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) $(SETUP_OBJ) PVS-Studio.log report.tasks compile_commands.json strace_out
 
-# Valgrind memory leak detection (master with one player and the view)
-valgrind-test: all
-	@echo "Running Valgrind (master + view + 1 player)..."
-	# Use per-process logs so child processes (like view) produce their own files
-	TERM=$(TERM) $(VALGRIND) $(VG_FLAGS) --log-file=valgrind_%p.log \
+# Valgrind memory leak detection scenarios
+# Note: These tests clean old logs before running.
+
+valgrind-test-1p: all
+	@echo "--- Running Valgrind (master + view + 1 player) ---"
+	@rm -f valgrind_*.log
+	TERM=$(TERM) $(VALGRIND) $(VG_FLAGS) --log-file=valgrind_1p_%p.log \
 		$(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 1 -v $(BIN_DIR)/view -p $(BIN_DIR)/player
-	@echo "Valgrind logs generated (one per PID):"
-	@ls -1 valgrind_*.log || echo "No log files found"
-	@echo "Tip: grep -H "LEAK SUMMARY" valgrind_*.log"
+	@echo "Valgrind logs generated (valgrind_1p_*.log)."
 
-# PVS-Studio static analysis
-pvs-analysis: clean
-	@echo "Running PVS-Studio static analysis..."
-	@echo "=== Capturing compiler invocations (trace) ==="
-	pvs-studio-analyzer trace -o strace_out -- make clean all
-	@echo "=== Running PVS-Studio analysis ==="
-	pvs-studio-analyzer analyze -f strace_out -C gcc -o PVS-Studio.log
-	@echo "=== Converting results to readable formats ==="
-	plog-converter -a GA:1,2 -t tasklist -o report.tasks PVS-Studio.log
-	plog-converter -a GA:1,2 -t text -o PVS-Studio.txt PVS-Studio.log
-	@echo "=== Creating component-specific views (master/view/player) ==="
-	@grep -E "/master/|\\bmaster\\.c\\b" PVS-Studio.txt > PVS-Studio-master.txt || true
-	@grep -E "/view/|\\bview\\.c\\b"     PVS-Studio.txt > PVS-Studio-view.txt   || true
-	@grep -E "/player/|\\bplayer\\.c\\b" PVS-Studio.txt > PVS-Studio-player.txt || true
-	@echo "=== Analysis complete ==="
-	@echo "Summary files: report.tasks, PVS-Studio.txt"
-	@echo "Per-component: PVS-Studio-master.txt, PVS-Studio-view.txt, PVS-Studio-player.txt"
+valgrind-test-2-same-p: all
+	@echo "--- Running Valgrind (master + view + 2 identical players) ---"
+	@rm -f valgrind_*.log
+	TERM=$(TERM) $(VALGRIND) $(VG_FLAGS) --log-file=valgrind_2p_same_%p.log \
+		$(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 2 -v $(BIN_DIR)/view -p $(BIN_DIR)/player
+	@echo "Valgrind logs generated (valgrind_2p_same_*.log)."
 
-# Combined analysis (Valgrind + PVS-Studio)
-full-analysis: pvs-analysis valgrind-test
-	@echo "Full analysis completed!"
-	@echo "PVS-Studio results: report.tasks"
-	@echo "Valgrind results: valgrind_*.log"
+# Valgrind test with 2 different players
+# NOTE: This assumes your master program can accept multiple '-p' arguments.
+valgrind-test-2-mixed-p: all
+	@echo "--- Running Valgrind (master + view + 2 different players) ---"
+	@rm -f valgrind_*.log
+	TERM=$(TERM) $(VALGRIND) $(VG_FLAGS) --log-file=valgrind_2p_mixed_%p.log \
+		$(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 2 -v $(BIN_DIR)/view -p $(BIN_DIR)/player -p $(BIN_DIR)/player2
+	@echo "Valgrind logs generated (valgrind_2p_mixed_*.log)."
+
+valgrind-test: valgrind-test-1p valgrind-test-2-same-p valgrind-test-2-mixed-p
+	@echo "\n--- All Valgrind tests completed. ---"
+	@echo "Tip: grep -H 'LEAK SUMMARY' valgrind_*.log"
+
+# PVS-Studio analysis using bear (recommended for this environment)
+pvs-test:
+	@echo "Running PVS-Studio Analysis with bear..."
+	@$(MAKE) clean && \
+	bear -- $(MAKE) all && \
+	pvs-studio-analyzer analyze -o PVS-Studio.log && \
+	plog-converter -a '64:1,2,3;GA:1,2,3;OP:1,2,3' -t tasklist -o report.tasks PVS-Studio.log
+	@echo "PVS-Studio analysis complete. Report generated at report.tasks"

@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,7 +33,7 @@ int getMove(player_t* player, game_state_t* state, int me) {
     int best_move = 0;
     int best_value = -2147483648; // valor muy pequeño
 
-    for (int move = 0; move < 8; ++move) {
+    for (int move = 0; move < 8; move++) {
         int nx = x + dx[move];
         int ny = y + dy[move];
         if (nx >= 0 && nx < width && ny >= 0 && ny < height) {

@@ -1,8 +1,11 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
+
 #include "player_lib.h"
 #include <fcntl.h>
 
 // Implementaciones compartidas por todos los jugadores. No definir `getMove` aquí;
-// cada jugador debe definir su propia versión en su archivo de jugador.
+// cada jugador debe definir su propia versión en su archivo de jugador. 
 
 void cleanup_resources(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
                       size_t state_size, size_t sync_size, int state_fd, int sync_fd) {

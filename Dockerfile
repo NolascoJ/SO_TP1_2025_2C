@@ -14,7 +14,8 @@ RUN apt-get update && \
         strace \
         build-essential \
         cmake \
-        valgrind && \
+        valgrind \
+        bear && \
     rm -rf /var/lib/apt/lists/*
 
 # 2) Agrega el repo oficial de PVS-Studio e instala
