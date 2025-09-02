@@ -217,7 +217,6 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
 
     int nx = (int)curx + dx[code];
     int ny = (int)cury + dy[code];
-
     // Límites del tablero
     if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
         game_state_ptr->players[player_idx].invalid_moves++;
