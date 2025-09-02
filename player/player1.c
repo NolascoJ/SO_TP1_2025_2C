@@ -17,8 +17,8 @@ int getMove(player_t* player, game_state_t* state, int me) {
     // Greedy: mira las 8 casillas alrededor (incluye diagonales) y elige la de mayor valor.
     int width = state->width;
     int height = state->height;
-    int x = player->x_coord;
-    int y = player->y_coord;
+    int x = player[me].x_coord;
+    int y = player[me].y_coord;
 
     int dx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
     int dy[] = {-1, -1, -1, 0, 0, 1, 1, 1};

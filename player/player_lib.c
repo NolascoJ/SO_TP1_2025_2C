@@ -59,12 +59,13 @@ void take_snapshot(game_state_t* game_state_ptr, player_t* playerList, game_stat
 // de acceso a memoria compartida y sincronización ya presente en este archivo.
 int main(int argc, char* argv[]) {
 
-    if (argc != 3) {
+    if (argc < 3) {
         return 1;
     }
  
     int gameWidth = atoi(argv[1]);
     int gameHeight = atoi(argv[2]);
+    int providedIndex = (argc >= 4) ? atoi(argv[3]) : -1;
     
     int game_state_fd, game_sync_fd;
     game_state_t* game_state_ptr;
@@ -84,15 +85,21 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int me = getMe(game_state_ptr);
+    int me = (providedIndex >= 0) ? providedIndex : (int)getMe(game_state_ptr);
     player_t playerList[9];
     char state_buffer[sizeof(game_state_t) + gameWidth * gameHeight * sizeof(int)];
     game_state_t* state = (game_state_t*)state_buffer;
 
-    while (!game_state_ptr->game_over && !game_state_ptr->players[me].is_blocked) {
+    while (true) {
         acquire_read_lock(game_sync_ptr, me);
 
         take_snapshot(game_state_ptr, playerList, state, gameWidth, gameHeight);
+
+        // Check termination conditions AFTER acquiring the lock to avoid race conditions
+        if (game_state_ptr->game_over || game_state_ptr->players[me].is_blocked) {
+            release_read_lock(game_sync_ptr);
+            break;
+        }
 
         release_read_lock(game_sync_ptr);
 

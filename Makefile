@@ -1,7 +1,7 @@
 # Minimal Makefile to build the view app with ncurses
 
 CC := gcc
-CFLAGS := -std=c11 -Wall -Wextra -I./shared_memory -I./utils -I./master
+CFLAGS := -std=c11 -Wall -Wextra -I./shared_memory -I./utils -I./master -g
 NCURSES_LIB := -lncurses
 
 # Valgrind configuration

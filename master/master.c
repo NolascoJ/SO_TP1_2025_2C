@@ -66,14 +66,30 @@ int main(int argc, char *argv[]) {
         sem_post(&game_sync_ptr->master_mutex);
 
         if (remaining_players == 0) {
+            sem_wait(&game_sync_ptr->game_state_mutex);
+            printf("DEBUG: All players finished! Setting game_over=true\n");
             game_state_ptr->game_over = true;
+            sem_post(&game_sync_ptr->game_state_mutex);
+
+            // Signal view to update one final time
+            if (config.view_path != NULL) {
+                sem_post(&game_sync_ptr->master_to_view);
+                sem_wait(&game_sync_ptr->view_to_master);
+            }
         }
     }
 
     close_player_pipes(rfd, config.player_count);
-    
-    // Wait for all child processes to terminate
-    while(wait(NULL) > 0);
+
+    // Unblock any remaining players that might be waiting on semaphores
+    for (unsigned int i = 0; i < config.player_count; i++) {
+        sem_post(&game_sync_ptr->player_semaphores[i]);
+    }
+
+    // Wait for any remaining child processes to terminate (view process, etc.)
+    while(wait(NULL) > 0) {
+        // Continue waiting until no more children
+    }
 
     destroy_game_sync(game_sync_ptr, config.player_count);
 
@@ -102,9 +118,11 @@ void create_players(int rfd[], const game_config_t *config, game_state_t *game_s
 
             char width_str[16];
             char height_str[16];
+            char index_str[16];
             snprintf(width_str, sizeof(width_str), "%u", config->width);
             snprintf(height_str, sizeof(height_str), "%u", config->height);
-            execve(config->player_path[i], (char*[]){(char*)config->player_path[i], width_str, height_str, NULL}, environ);
+            snprintf(index_str, sizeof(index_str), "%u", i);
+            execve(config->player_path[i], (char*[]){(char*)config->player_path[i], width_str, height_str, index_str, NULL}, environ);
             
             perror("execve");
             exit(EXIT_FAILURE);
@@ -146,15 +164,34 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
     int dx[8] = {0, 1, 1, 1, 0, -1, -1, -1};
     int dy[8] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
-    if (code > 7) {
-        game_state_ptr->players[player_idx].invalid_moves++;
-        return 0;
-    }
-
     unsigned short curx = game_state_ptr->players[player_idx].x_coord;
     unsigned short cury = game_state_ptr->players[player_idx].y_coord;
 
-    
+    // If the player has no valid neighbors from the current position, mark as blocked
+    int valid_neighbors_from_current = 0;
+    for (int m = 0; m < 8; m++) {
+        int sx = (int)curx + dx[m];
+        int sy = (int)cury + dy[m];
+        if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+            int sidx = sy * width + sx;
+            if (game_state_ptr->board_data[sidx] > 0) {
+                valid_neighbors_from_current++;
+                break;
+            }
+        }
+    }
+    if (valid_neighbors_from_current == 0) {
+        game_state_ptr->players[player_idx].is_blocked = true;
+        (*remaining_players)--;
+        close(rfd[player_idx]);
+        rfd[player_idx] = -1;
+        return 0;
+    }
+
+    if (code > 7 ) {
+        game_state_ptr->players[player_idx].invalid_moves++;
+        return 0;
+    }
 
     int nx = (int)curx + dx[code];
     int ny = (int)cury + dy[code];
@@ -184,8 +221,9 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
     // Casillas vecinas válidas
     int valid_neighbors = 0;
     for (int m = 0; m < 8; m++) {
-        int sx = (int)curx + dx[m];
-        int sy = (int)cury + dy[m];
+        int sx = (int)nx + dx[m];
+        int sy = (int)ny + dy[m];
+
         if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
             int sidx = sy * width + sx;
             if (game_state_ptr->board_data[sidx] > 0) {
@@ -224,9 +262,13 @@ void handle_player_inputs(int rfd[], fd_set* readfds, const game_config_t *confi
                 }
                 sem_post(&game_sync_ptr->player_semaphores[i]);
             } else {
+                // Only decrement if not already decremented in process_player_move
+                if (!game_state_ptr->players[i].is_blocked) {
+                    (*remaining_players)--;
+                }
                 close(rfd[i]);
                 rfd[i] = -1;
-                (*remaining_players)--;
+
                 if (bytes_read < 0) {
                     perror("read from player");
                 }
