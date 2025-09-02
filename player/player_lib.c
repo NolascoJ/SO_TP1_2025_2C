@@ -3,6 +3,7 @@
 
 #include "player_lib.h"
 #include <fcntl.h>
+#include <stdlib.h>
 
 // Implementaciones compartidas por todos los jugadores. No definir `getMove` aquí;
 // cada jugador debe definir su propia versión en su archivo de jugador. 
@@ -17,15 +18,22 @@ void cleanup_resources(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
     }
 }
 
-unsigned int getMe(game_state_t* game_state_ptr) {
+int getMe(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr) {
     pid_t pid = getpid();
+
+ 
+    sem_wait(&game_sync_ptr->readers_count_mutex);
+
     for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
         if (game_state_ptr->players[i].pid == pid) {
-            return i;
+            sem_post(&game_sync_ptr->readers_count_mutex);
+            return (int)i; 
         }
     }
-    perror("I dont exist in the board");
-    return 1;
+
+    sem_post(&game_sync_ptr->readers_count_mutex);
+    perror("Player not found in game state - this should not happen!");
+    return -1;  // Return invalid index to indicate error
 }
 
 void acquire_read_lock(game_sync_t* game_sync_ptr, int me) {
@@ -62,10 +70,10 @@ int main(int argc, char* argv[]) {
     if (argc < 3) {
         return 1;
     }
- 
+
     int gameWidth = atoi(argv[1]);
     int gameHeight = atoi(argv[2]);
-    int providedIndex = (argc >= 4) ? atoi(argv[3]) : -1;
+    int providedIndex = -1; // Will be determined safely later
     
     int game_state_fd, game_sync_fd;
     game_state_t* game_state_ptr;
@@ -85,7 +93,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int me = (providedIndex >= 0) ? providedIndex : (int)getMe(game_state_ptr);
+    int me = (providedIndex >= 0) ? providedIndex : getMe(game_state_ptr, game_sync_ptr);
+
+    // Handle error case where player is not found
+    if (me == -1) {
+        cleanup_resources(game_state_ptr, game_sync_ptr, shm_state_size, shm_sync_size, game_state_fd, game_sync_fd);
+        return 1;
+    }
     player_t playerList[9];
     char state_buffer[sizeof(game_state_t) + gameWidth * gameHeight * sizeof(int)];
     game_state_t* state = (game_state_t*)state_buffer;

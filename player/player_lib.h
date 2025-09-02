@@ -17,7 +17,7 @@
 void cleanup_resources(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
                        size_t state_size, size_t sync_size, int state_fd, int sync_fd);
 
-unsigned int getMe(game_state_t* game_state_ptr);
+int getMe(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr);
 
 void acquire_read_lock(game_sync_t* game_sync_ptr, int me);
 

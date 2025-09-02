@@ -48,7 +48,7 @@ static void init_game_sync(game_sync_t* sync_ptr, unsigned int player_count) {
     sem_init(&sync_ptr->game_state_mutex, 1, 1);
     sem_init(&sync_ptr->readers_count_mutex, 1, 1);
     sync_ptr->readers_count = 0;
-    
+
     for (unsigned int i = 0; i < player_count && i < GAME_SYNC_MAX_PLAYERS; i++) {
         sem_init(&sync_ptr->player_semaphores[i], 1, 1);
     }
