@@ -320,3 +320,30 @@ clear
 ./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 50 -h 50
 ./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player -d 1  -w 50 -h 50
 exit
+type keyword
+dcstop
+exit
+ls
+dcrun
+make clean all
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 100 -h 100
+make clean all
+make clean all
+make clean all
+make clean all
+make pvs-test
+ls
+nvim report.tasks 
+vim report.tasks 
+make pvs-test
+vim report.tasks 
+make clean all
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 100 -h 100
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 30 -h 30
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 30 -h 30
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 30 -h 30
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 30 -h 30
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 30 -h 30
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 30 -h 30
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+exit

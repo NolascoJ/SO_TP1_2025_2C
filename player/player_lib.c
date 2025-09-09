@@ -22,16 +22,16 @@ int getMe(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr) {
     pid_t pid = getpid();
 
  
-    sem_wait(&game_sync_ptr->readers_count_mutex);
+    sem_wait(&game_sync_ptr->game_state_mutex);
 
     for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
         if (game_state_ptr->players[i].pid == pid) {
-            sem_post(&game_sync_ptr->readers_count_mutex);
+            sem_post(&game_sync_ptr->game_state_mutex);
             return (int)i; 
         }
     }
 
-    sem_post(&game_sync_ptr->readers_count_mutex);
+    sem_post(&game_sync_ptr->game_state_mutex);
     perror("Player not found in game state - this should not happen!");
     return -1;  // Return invalid index to indicate error
 }
@@ -73,7 +73,6 @@ int main(int argc, char* argv[]) {
 
     int gameWidth = atoi(argv[1]);
     int gameHeight = atoi(argv[2]);
-    int providedIndex = -1; // Will be determined safely later
     
     int game_state_fd, game_sync_fd;
     game_state_t* game_state_ptr;
@@ -93,7 +92,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int me = (providedIndex >= 0) ? providedIndex : getMe(game_state_ptr, game_sync_ptr);
+    int me =getMe(game_state_ptr, game_sync_ptr);
 
     // Handle error case where player is not found
     if (me == -1) {

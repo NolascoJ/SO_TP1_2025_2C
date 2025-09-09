@@ -106,3 +106,22 @@ pvs-test:
 	pvs-studio-analyzer analyze -o PVS-Studio.log && \
 	plog-converter -a '64:1,2,3;GA:1,2,3;OP:1,2,3' -t tasklist -o report.tasks PVS-Studio.log
 	@echo "PVS-Studio analysis complete. Report generated at report.tasks"
+
+# Default runtime configuration for `make run` (override on the command line)
+w ?= 10 # width
+h ?= 10 # height
+d ?= 200 # delay
+t ?= 2 # timeout
+RUN_SEED ?= 1
+v ?= $(BIN_DIR)/view
+# p: space-separated list of player binaries, e.g. p="$(BIN_DIR)/player $(BIN_DIR)/player2"
+p ?= $(BIN_DIR)/player
+# Pass a single -p followed by all player paths so the master's parsing (which
+# expects -p followed by N player args) works correctly.
+player_flags := -p $(p)
+
+.PHONY: run
+run: all
+	@echo "Running master with view and players: $(p)"
+	TERM=$(TERM) $(BIN_DIR)/master -w $(w) -h $(h) -d $(d) -t $(t) -s $(RUN_SEED) -v $(v) $(player_flags)
+

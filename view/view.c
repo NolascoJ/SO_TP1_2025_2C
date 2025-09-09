@@ -1,7 +1,7 @@
 
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,7 +14,6 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <errno.h>
-
 #include "../utils/game_state.h"
 #include "../utils/game_sync.h"
 #include "../shared_memory/shm.h"
@@ -92,9 +91,11 @@ int main(int argc, char *argv[]) {
     
     WINDOW *leaderboard_win = newwin(leaderboard_h, leaderboard_w, leaderboard_y, leaderboard_x);
     WINDOW *matrix_win = newwin(matrix_h, matrix_w, matrix_y, matrix_x);
+
+    bool is_over = false;
     
     // Main loop
-    for (;;) {
+    do{
         // Wait for master signal
         int sem_result = sem_wait(&sync_ptr->master_to_view);
         if (sem_result != 0) {
@@ -119,15 +120,17 @@ int main(int argc, char *argv[]) {
         refresh();
         wrefresh(leaderboard_win);
         wrefresh(matrix_win);
+
+        if ( gs_ptr->game_over) {
+            is_over = true;
+        }
         
         // Signal master that view is done
         sem_post(&sync_ptr->view_to_master);
         
         // Exit if game is over
-        if (gs_ptr->game_over) {
-            break;
-        }
-    }
+  
+    }while(!is_over);
     
     // Cleanup
     delwin(leaderboard_win);
@@ -149,7 +152,7 @@ void init_player_colors(void) {
         init_pair(PLAYER_COLOR_BLUE,       COLOR_BLUE,    COLOR_BLACK);
         init_pair(PLAYER_COLOR_MAGENTA,    COLOR_MAGENTA, COLOR_BLACK);
         init_pair(PLAYER_COLOR_CYAN,       COLOR_CYAN,    COLOR_BLACK);
-        init_pair(PLAYER_COLOR_WHITE,      COLOR_WHITE,   COLOR_BLACK);
+        init_pair(PLAYER_COLOR_WHITE,      COLOR_BLUE,   COLOR_RED);
         init_pair(PLAYER_COLOR_RED_BLUE,   COLOR_RED,     COLOR_BLUE);
         init_pair(PLAYER_COLOR_GREEN_BLUE, COLOR_GREEN,   COLOR_BLUE);
     }
@@ -217,8 +220,8 @@ void draw_matrix(WINDOW* win, const game_state_t* gs) {
                 mvwprintw(win, row, col, NUMBER_FORMAT, value);
             } else {
                 // Colored for values <= 0 (player territories)
-                int player_idx = -value;  // 0 -> player 1, -1 -> player 2, etc.
-                if (player_idx >= 0 && player_idx < MAX_PLAYERS && has_colors()) {
+                int player_idx = -value;  // 0 -> player 0, -1 -> player 1, etc.
+                if (player_idx < MAX_PLAYERS && has_colors()) {
                     wattron(win, COLOR_PAIR(player_idx + 1) | A_BOLD);
                     mvwprintw(win, row, col, NUMBER_FORMAT, value);
                     wattroff(win, COLOR_PAIR(player_idx + 1) | A_BOLD);
