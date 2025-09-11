@@ -34,8 +34,25 @@ static void init_players(const game_config_t* config, game_state_t* game_state_p
         game_state_ptr->players[i].score = 0;
         game_state_ptr->players[i].valid_moves = 0;
         game_state_ptr->players[i].invalid_moves = 0;
-        game_state_ptr->players[i].x_coord = rand() % config->width;
-        game_state_ptr->players[i].y_coord = rand() % config->height;
+
+
+         //loopear hasta que encuentre una posición libre
+        unsigned short x, y;
+        bool occupied;
+        do {
+            occupied = false;
+            x = rand() % config->width;
+            y = rand() % config->height;
+            for (unsigned int j = 0; j < i; j++) {
+                if (game_state_ptr->players[j].x_coord == x && game_state_ptr->players[j].y_coord == y) {
+                    occupied = true;
+                    break;
+                }
+            }
+        } while (occupied);
+        
+        game_state_ptr->players[i].x_coord = x;
+        game_state_ptr->players[i].y_coord = y;
         game_state_ptr->players[i].pid = 0;
         game_state_ptr->players[i].is_blocked = false;
     }

@@ -47,12 +47,22 @@ int main(int argc, char *argv[]) {
     unsigned int remaining_players = config.player_count;
     time_t last_valid_move_time = time(NULL);
 
-    bool is_over = false;
+    char player_activity1[config.player_count];
+    char player_activity2[config.player_count];
+    for (unsigned int i = 0; i < config.player_count; i++) {
+        player_activity1[i] = 0;
+        player_activity2[i] = 0;
+    }
+    
+
+    char *played_last_turn = player_activity1;
+    char *played_this_turn = player_activity2;
+
 
     while(1){
         time_t now = time(NULL);
         if ((unsigned int)(now - last_valid_move_time) >= config.timeout || remaining_players == 0) {
-            set_game_over(game_sync_ptr, game_state_ptr, &is_over);
+            set_game_over(game_sync_ptr, game_state_ptr);
             break;
         }
         fd_set readfds;
@@ -60,16 +70,20 @@ int main(int argc, char *argv[]) {
 
         int ready = wait_for_fds(max_fd, &readfds, config.timeout);
         if (ready <= 0) { 
-            set_game_over(game_sync_ptr, game_state_ptr, &is_over);
+            set_game_over(game_sync_ptr, game_state_ptr);
             break;
         }
 
         sem_wait(&game_sync_ptr->master_mutex);
         sem_wait(&game_sync_ptr->game_state_mutex);
-        handle_player_inputs(rfd, &readfds, &config, game_state_ptr, game_sync_ptr, &remaining_players, &last_valid_move_time);
+        handle_player_inputs(rfd, &readfds, &config, game_state_ptr, game_sync_ptr, &remaining_players, &last_valid_move_time, played_last_turn, played_this_turn);
         sem_post(&game_sync_ptr->game_state_mutex);
         sem_post(&game_sync_ptr->master_mutex);
         
+        // Swap buffers for the next turn
+        char *temp = played_last_turn;
+        played_last_turn = played_this_turn;
+        played_this_turn = temp;
     }
 
     if (config.view_path != NULL) {
@@ -226,34 +240,61 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
     return 1;
 }
 
-void handle_player_inputs(int rfd[], fd_set* readfds, const game_config_t *config,
-                          game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
-                          unsigned int* remaining_players, time_t* last_valid_move_time) {
+static void player_order(unsigned int process_order[], unsigned int* process_count, char played_this_turn[], const game_config_t* config, const char played_last_turn[], const int rfd[], const fd_set* readfds) {
     for (unsigned int i = 0; i < config->player_count; i++) {
-        if (rfd[i] != -1 && FD_ISSET(rfd[i], readfds)) {
-            char c;
-            ssize_t bytes_read = read(rfd[i], &c, 1);
+        played_this_turn[i] = 0;
+    }
 
-            if (bytes_read > 0) {
-                int cambios = process_player_move(game_state_ptr, i, c, remaining_players, rfd, last_valid_move_time);
-
-                if (config->view_path != NULL && cambios) {
-                    sem_post(&game_sync_ptr->master_to_view);
-                    sem_wait(&game_sync_ptr->view_to_master);
-                    usleep(config->delay * 1000);
-                }
-                sem_post(&game_sync_ptr->player_semaphores[i]);
-            } else {
-                // llegue a EOF
-                if (!game_state_ptr->players[i].is_blocked) {
-                    (*remaining_players)--;
-                }
-                close(rfd[i]); //close EOF
-                rfd[i] = -1;
-
-            }
+    *process_count = 0;
+    for (unsigned int i = 0; i < config->player_count; i++) {
+        if (!played_last_turn[i] && rfd[i] != -1 && FD_ISSET(rfd[i], readfds)) {
+            process_order[(*process_count)++] = i;
         }
     }
+
+    for (unsigned int i = 0; i < config->player_count; i++) {
+        if (played_last_turn[i] && rfd[i] != -1 && FD_ISSET(rfd[i], readfds)) {
+            process_order[(*process_count)++] = i;
+        }
+    }
+}
+
+
+void handle_player_inputs(int rfd[], fd_set* readfds, const game_config_t *config,
+                          game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
+                          unsigned int* remaining_players, time_t* last_valid_move_time, char played_last_turn[], char played_this_turn[]) {
+
+    unsigned int process_order[config->player_count];
+    unsigned int process_count = 0;
+    player_order(process_order, &process_count, played_this_turn, config, played_last_turn, rfd, readfds);
+
+
+    for (unsigned int k = 0; k < process_count; k++) {
+        unsigned int i = process_order[k];
+
+        char c;
+        ssize_t bytes_read = read(rfd[i], &c, 1);
+
+        if (bytes_read > 0) {
+            played_this_turn[i] = 1; 
+            int cambios = process_player_move(game_state_ptr, i, c, remaining_players, rfd, last_valid_move_time);
+
+            if (config->view_path != NULL && cambios) {
+                sem_post(&game_sync_ptr->master_to_view);
+                sem_wait(&game_sync_ptr->view_to_master);
+                usleep(config->delay * 1000);
+            }
+            sem_post(&game_sync_ptr->player_semaphores[i]);
+        } else {
+            // llegue a EOF
+            if (!game_state_ptr->players[i].is_blocked) {
+                (*remaining_players)--;
+            }
+            close(rfd[i]); //close EOF
+            rfd[i] = -1;
+        }
+    }
+
 }
 void create_view_process(const game_config_t *config, int game_state_fd, int game_sync_fd) {
     pid_t pid = fork();
@@ -278,12 +319,12 @@ void execute_process(const char *path, unsigned int width, unsigned int height) 
     exit(EXIT_FAILURE);
 }
 
-void set_game_over(game_sync_t* game_sync_ptr, game_state_t* game_state_ptr, bool* is_over) {
+void set_game_over(game_sync_t* game_sync_ptr, game_state_t* game_state_ptr) {
     sem_wait(&game_sync_ptr->master_mutex);
     sem_wait(&game_sync_ptr->game_state_mutex);
     
     game_state_ptr->game_over = true;
-    *is_over = true;
+
     
     sem_post(&game_sync_ptr->game_state_mutex);
     sem_post(&game_sync_ptr->master_mutex);

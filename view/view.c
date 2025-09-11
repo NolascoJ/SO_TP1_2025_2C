@@ -158,7 +158,7 @@ void init_player_colors(void) {
     }
 }
 
-void draw_leaderboard(WINDOW* win, const game_state_t* gs) {
+void draw_leaderboard(WINDOW* win, const game_state_t* game_state_ptr) {
     werase(win);
     box(win, 0, 0);
     
@@ -169,8 +169,8 @@ void draw_leaderboard(WINDOW* win, const game_state_t* gs) {
     mvwprintw(win, 1, INVALID_COLUMN_POS, "Invalid");
     
     // Player rows
-    for (unsigned int i = 0; i < gs->player_count && i < MAX_PLAYERS; i++) {
-        const player_t* p = &gs->players[i];
+    for (unsigned int i = 0; i < game_state_ptr->player_count && i < MAX_PLAYERS; i++) {
+        const player_t* p = &game_state_ptr->players[i];
         int row = (int)i + 2;
         
         // Display player name with color
@@ -184,22 +184,22 @@ void draw_leaderboard(WINDOW* win, const game_state_t* gs) {
     }
 }
 
-void draw_matrix(WINDOW* win, const game_state_t* gs) {
+void draw_matrix(WINDOW* win, const game_state_t* game_state_ptr) {
     werase(win);
     box(win, 0, 0);
     
     // Draw matrix
-    for (unsigned int i = 0; i < gs->height; i++) {
-        for (unsigned int j = 0; j < gs->width; j++) {
-            int value = gs->board_data[i * gs->width + j];
+    for (unsigned int i = 0; i < game_state_ptr->height; i++) {
+        for (unsigned int j = 0; j < game_state_ptr->width; j++) {
+            int value = game_state_ptr->board_data[i * game_state_ptr->width + j];
             int row = (int)i + 1;
             int col = (int)j * DEFAULT_MATRIX_CELL_WIDTH + WINDOW_BORDER_SIZE;
             
             // Check if any player is currently at this position
             bool player_here = false;
             int current_player = -1;
-            for (unsigned int p = 0; p < gs->player_count && p < MAX_PLAYERS; p++) {
-                if (gs->players[p].x_coord == j && gs->players[p].y_coord == i) {
+            for (unsigned int p = 0; p < game_state_ptr->player_count && p < MAX_PLAYERS; p++) {
+                if (game_state_ptr->players[p].x_coord == j && game_state_ptr->players[p].y_coord == i) {
                     player_here = true;
                     current_player = (int)p;
                     break;

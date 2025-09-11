@@ -40,9 +40,9 @@
 #define SCORE_FORMAT "%6u"
 #define MOVES_FORMAT "%4u"
 
-void draw_leaderboard(WINDOW* win, const game_state_t* gs);
+void draw_leaderboard(WINDOW* win, const game_state_t* game_state_ptr);
 
-void draw_matrix(WINDOW* win, const game_state_t* gs);
+void draw_matrix(WINDOW* win, const game_state_t* game_state_ptr);
 
 void handle_adaptive_resize(int *scr_h, int *scr_w, int game_width, int game_height, 
                            const game_state_t* gs_ptr, WINDOW **leaderboard_win, WINDOW **matrix_win);

@@ -347,3 +347,13 @@ make clean all
 ./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player -d 1  -w 30 -h 30
 ./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
 exit
+make clean all
+exit
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --trace-children=yes -q --log-file="valgrind_no_view_%p.log" ./bin/master -p ./bin/player
+make valgrind-test
+grep -H 'LEAK SUMMARY' valgrind_*.log
+make valgrind-extensive
+grep -H 'LEAK SUMMARY' valgrind_*.log
+make valgrind-extensive
+make clean 
+exit
