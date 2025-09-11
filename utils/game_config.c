@@ -37,7 +37,7 @@ while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
             case 'w':
                 config.width = (unsigned int)atoi(optarg);
                
-                if (config.width < 10) {
+                if (config.width < DEFAULT_WIDTH) {
                     fprintf(stderr, "Error: Width must be at least 10.\n");
                     exit(EXIT_FAILURE);
                 }
@@ -45,7 +45,7 @@ while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
             case 'h':
                 config.height = (unsigned int)atoi(optarg);
                
-                if (config.height < 10) {
+                if (config.height < DEFAULT_HEIGHT) {
                     fprintf(stderr, "Error: Height must be at least 10.\n");
                     exit(EXIT_FAILURE);
                 }
@@ -73,7 +73,7 @@ while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
             case 'p':
                 players_path_set = true;
                 config.player_count = 0;
-                for (int i = optind - 1; i < argc && config.player_count < 9; i++) {
+                for (int i = optind - 1; i < argc && config.player_count < MAX_PLAYERS; i++) {
                     if (argv[i][0] != '-') {
                         config.player_path[config.player_count] = argv[i];
                         config.player_count++;
@@ -81,7 +81,7 @@ while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
                         break;
                     }
                 }
-                if (config.player_count < 1 || config.player_count > 9) {
+                if (config.player_count < MIN_PLAYERS || config.player_count > MAX_PLAYERS) {
                     fprintf(stderr, "Error: Player count must be between 1 and 9.\n");
                     exit(EXIT_FAILURE);
                 }

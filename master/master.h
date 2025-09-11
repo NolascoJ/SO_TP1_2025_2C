@@ -17,6 +17,6 @@ void close_player_pipes(int rfd[], unsigned int player_count);
 int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, char move, unsigned int* remaining_players, int rdf[], time_t* last_valid_move_time);
 void handle_player_inputs(int rfd[], fd_set* readfds, const game_config_t *config, 
                           game_state_t* game_state_ptr, game_sync_t* game_sync_ptr, 
-                          unsigned int* remaining_players, time_t* last_valid_move_time, char played_last_turn[], char played_this_turn[]);
+                          unsigned int* remaining_players, time_t* last_valid_move_time, char played_last_turn[], char played_this_turn[], unsigned int round_robin_start_index);
 
 #endif // MASTER_H

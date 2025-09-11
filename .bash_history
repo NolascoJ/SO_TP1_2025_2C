@@ -357,3 +357,26 @@ grep -H 'LEAK SUMMARY' valgrind_*.log
 make valgrind-extensive
 make clean 
 exit
+make clean all
+make clean all
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+./bin/master -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player ./bin/player ./bin/player2 -d 1  -w 30 -h 30 -t 3
+./bin/master -v ./bin/view -p ./bin/player ./bin/player  -d 400  -w 10 -h 10 
+./bin/master -v ./bin/view -p ./bin/player ./bin/player  ./bin/player -d 400  -w 10 -h 10 
+./bin/master -v ./bin/view -p ./bin/player ./bin/player  ./bin/player -d 400  -w 10 -h 10 
+make clean all
+./bin/master -v ./bin/view -p ./bin/player ./bin/player  ./bin/player -d 400  -w 10 -h 10 
+./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player  ./bin/player -d 400  -w 10 -h 10 
+./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player  ./bin/player2  -d 40  -w 10 -h 10 
+make clean all
+./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player2  -d 40  -w 10 -h 10 
+./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player2  -d 40  -w 10 -h 10 
+make clean all
+./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player2  -d 40  -w 10 -h 10 
+./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player2  -d 40  -w 10 -h 10 
+exit

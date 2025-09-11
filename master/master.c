@@ -58,6 +58,8 @@ int main(int argc, char *argv[]) {
     char *played_last_turn = player_activity1;
     char *played_this_turn = player_activity2;
 
+    unsigned int round_robin_start_index = 0;
+
 
     while(1){
         time_t now = time(NULL);
@@ -76,9 +78,11 @@ int main(int argc, char *argv[]) {
 
         sem_wait(&game_sync_ptr->master_mutex);
         sem_wait(&game_sync_ptr->game_state_mutex);
-        handle_player_inputs(rfd, &readfds, &config, game_state_ptr, game_sync_ptr, &remaining_players, &last_valid_move_time, played_last_turn, played_this_turn);
+        handle_player_inputs(rfd, &readfds, &config, game_state_ptr, game_sync_ptr, &remaining_players, &last_valid_move_time, played_last_turn, played_this_turn, round_robin_start_index);
         sem_post(&game_sync_ptr->game_state_mutex);
         sem_post(&game_sync_ptr->master_mutex);
+        
+        round_robin_start_index = (round_robin_start_index + 1) % config.player_count;
         
         // Swap buffers for the next turn
         char *temp = played_last_turn;
@@ -240,21 +244,23 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
     return 1;
 }
 
-static void player_order(unsigned int process_order[], unsigned int* process_count, char played_this_turn[], const game_config_t* config, const char played_last_turn[], const int rfd[], const fd_set* readfds) {
+static void player_order(unsigned int process_order[], unsigned int* process_count, char played_this_turn[], const game_config_t* config, const char played_last_turn[], const int rfd[], const fd_set* readfds, unsigned int round_robin_start_index) {
     for (unsigned int i = 0; i < config->player_count; i++) {
         played_this_turn[i] = 0;
     }
 
     *process_count = 0;
     for (unsigned int i = 0; i < config->player_count; i++) {
-        if (!played_last_turn[i] && rfd[i] != -1 && FD_ISSET(rfd[i], readfds)) {
-            process_order[(*process_count)++] = i;
+        unsigned int player_idx = (round_robin_start_index + i) % config->player_count;
+        if (!played_last_turn[player_idx] && rfd[player_idx] != -1 && FD_ISSET(rfd[player_idx], readfds)) {
+            process_order[(*process_count)++] = player_idx;
         }
     }
 
     for (unsigned int i = 0; i < config->player_count; i++) {
-        if (played_last_turn[i] && rfd[i] != -1 && FD_ISSET(rfd[i], readfds)) {
-            process_order[(*process_count)++] = i;
+        unsigned int player_idx = (round_robin_start_index + i) % config->player_count;
+        if (played_last_turn[player_idx] && rfd[player_idx] != -1 && FD_ISSET(rfd[player_idx], readfds)) {
+            process_order[(*process_count)++] = player_idx;
         }
     }
 }
@@ -262,11 +268,11 @@ static void player_order(unsigned int process_order[], unsigned int* process_cou
 
 void handle_player_inputs(int rfd[], fd_set* readfds, const game_config_t *config,
                           game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
-                          unsigned int* remaining_players, time_t* last_valid_move_time, char played_last_turn[], char played_this_turn[]) {
+                          unsigned int* remaining_players, time_t* last_valid_move_time, char played_last_turn[], char played_this_turn[], unsigned int round_robin_start_index) {
 
     unsigned int process_order[config->player_count];
     unsigned int process_count = 0;
-    player_order(process_order, &process_count, played_this_turn, config, played_last_turn, rfd, readfds);
+    player_order(process_order, &process_count, played_this_turn, config, played_last_turn, rfd, readfds, round_robin_start_index);
 
 
     for (unsigned int k = 0; k < process_count; k++) {
