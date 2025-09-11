@@ -30,7 +30,7 @@ static void handle_resize(int sig) {
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "view2: expected 2 args: <width> <height>\n");
+        fprintf(stderr, "view2: expected 2 argame_state: <width> <height>\n");
         return 1;
     }
     
@@ -38,20 +38,20 @@ int main(int argc, char *argv[]) {
     int game_height = atoi(argv[2]);
     
     // Map game state
-    size_t gs_size = sizeof(game_state_t) + (size_t)game_width * (size_t)game_height * sizeof(int);
-    int gs_fd = -1;
-    void* gs_map = shm_open_and_map("/game_state", gs_size, &gs_fd, O_RDONLY);
-    if (gs_map == NULL) {
+    size_t game_state_size = sizeof(game_state_t) + (size_t)game_width * (size_t)game_height * sizeof(int);
+    int game_state_fd = -1;
+    void* game_state_map = shm_open_and_map("/game_state", game_state_size, &game_state_fd, O_RDONLY);
+    if (game_state_map == NULL) {
         return 1;
     }
-    const game_state_t* gs_ptr = (const game_state_t*)gs_map;
+    const game_state_t* game_state_ptr = (const game_state_t*)game_state_map;
     
     // Map sync
     size_t sync_size = sizeof(game_sync_t);
     int sync_fd = -1;
     void* sync_map = shm_open_and_map("/game_sync", sync_size, &sync_fd, O_RDWR);
     if (sync_map == NULL) {
-        shm_close(gs_map, gs_size, gs_fd);
+        shm_close(game_state_map, game_state_size, game_state_fd);
         return 1;
     }
     game_sync_t* sync_ptr = (game_sync_t*)sync_map;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     getmaxyx(stdscr, scr_h, scr_w);
     
     // Layout: leaderboard at top, matrix below
-    int leaderboard_h = (int)gs_ptr->player_count + 3;  // Header + actual players + borders
+    int leaderboard_h = (int)game_state_ptr->player_count + 3;  // Header + actual players + borders
     int leaderboard_w = DEFAULT_LEADERBOARD_WIDTH;
     int leaderboard_y = LEADERBOARD_START_Y;
     int leaderboard_x = (scr_w - leaderboard_w) / 2;
@@ -109,19 +109,19 @@ int main(int argc, char *argv[]) {
         // Handle window resize if needed
         if (resize_needed) {
             resize_needed = 0;
-            handle_adaptive_resize(&scr_h, &scr_w, game_width, game_height, gs_ptr, &leaderboard_win, &matrix_win);
+            handle_adaptive_resize(&scr_h, &scr_w, game_width, game_height, game_state_ptr, &leaderboard_win, &matrix_win);
         }
         
         // Draw components
-        draw_leaderboard(leaderboard_win, gs_ptr);
-        draw_matrix(matrix_win, gs_ptr);
+        draw_leaderboard(leaderboard_win, game_state_ptr);
+        draw_matrix(matrix_win, game_state_ptr);
         
         // Refresh screens
         refresh();
         wrefresh(leaderboard_win);
         wrefresh(matrix_win);
 
-        if ( gs_ptr->game_over) {
+        if ( game_state_ptr->game_over) {
             is_over = true;
         }
         
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     endwin();
     
     shm_close(sync_map, sync_size, sync_fd);
-    shm_close(gs_map, gs_size, gs_fd);
+    shm_close(game_state_map, game_state_size, game_state_fd);
     
     return 0;
 }
@@ -234,7 +234,7 @@ void draw_matrix(WINDOW* win, const game_state_t* game_state_ptr) {
 }
 
 void handle_adaptive_resize(int *scr_h, int *scr_w, int game_width, int game_height, 
-                           const game_state_t* gs_ptr, WINDOW **leaderboard_win, WINDOW **matrix_win) {
+                           const game_state_t* game_state_ptr, WINDOW **leaderboard_win, WINDOW **matrix_win) {
     // Update ncurses after resize
     endwin();
     refresh();
@@ -248,7 +248,7 @@ void handle_adaptive_resize(int *scr_h, int *scr_w, int game_width, int game_hei
     int matrix_cell_width = DEFAULT_MATRIX_CELL_WIDTH;
     
     // Recalculate window positions
-    int leaderboard_h = (int)gs_ptr->player_count + 3;
+    int leaderboard_h = (int)game_state_ptr->player_count + 3;
     int leaderboard_y = LEADERBOARD_START_Y;
     int leaderboard_x = (*scr_w - leaderboard_w) / 2;
     if (leaderboard_x < 0) leaderboard_x = 0;
