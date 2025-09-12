@@ -1,29 +1,3 @@
-pvs-studio-analyzer credentials "PVS-Studio Free" "FREE-FREE-FREE-FREE"
-pvs-studio-analyzer trace -- make
-pvs-studio-analyzer analyze
-pvs-studio-analyzer analyze
-	pvs-studio-analyzer trace -- make
-	pvs-studio-analyzer analyze
-	plog-converter -a '64:1,2,3;GA:1,2,3;OP:1,2,3' -t tasklist -o report.tasks PVS-Studio.log
-cd "/Users/jnolascodecarles/ITBA/SO_TP1" && make pvs-analysis | cat
-# 1) Ensure license is visible to PVS
-mkdir -p ~/.config/PVS-Studio && cp -f .config/PVS-Studio/PVS-Studio.lic ~/.config/PVS-Studio/
-# 2) Force rebuild under trace, then analyze and convert
-make clean
-pvs-studio-analyzer trace -o strace_out -- make -B all
-pvs-studio-analyzer analyze -f strace_out -C gcc -o PVS-Studio.log
-plog-converter -a GA:1,2 -t tasklist -o report.tasks PVS-Studio.log
-clear
-mkdir -p ~/.config/PVS-Studio && cp -f .config/PVS-Studio/PVS-Studio.lic ~/.config/PVS-Studio/
-make clean
-make clean
-pvs-studio-analyzer trace -o strace_out -- make -B all
-pvs-studio-analyzer analyze -f strace_out -C gcc -o PVS-Studio.log
-make clean   # or equivalent
-make clean
-pvs-studio-analyzer trace -- make
-make clean
-pvs-studio-analyzer trace -- make
 pvs-studio-analyzer analyze -f strace_out -o PVS-Studio.log
 pvs-studio-analyzer trace -- -C gcc make
 pvs-studio-analyzer trace -- -C gcc make
@@ -462,4 +436,65 @@ make clean all
 make clean all
 ./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
 make clean
+exit
+make run
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+ls /dev/shm
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+ls /dev/shm
+ps
+ps -a
+ps
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+clear
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make clean all
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player"
+clear
+make
+make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player" w=15 h=15
 exit

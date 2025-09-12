@@ -21,6 +21,16 @@
 // Forward declaration for the new function
 static void draw_final_scoreboard(const game_state_t* game_state_ptr);
 
+// Helper type and comparator used for final scoreboard sorting
+typedef struct { unsigned int idx; unsigned int score; } player_idx_t;
+static int compare_player_idx_desc(const void* a, const void* b) {
+    const player_idx_t* pa = (const player_idx_t*)a;
+    const player_idx_t* pb = (const player_idx_t*)b;
+    if (pb->score != pa->score) return (pb->score > pa->score) - (pb->score < pa->score);
+    // tie-breaker: lower original index first for stability
+    return (pa->idx > pb->idx) - (pa->idx < pb->idx);
+}
+
 // Global flag for window resize
 static volatile sig_atomic_t resize_needed = 0;
 
@@ -150,20 +160,17 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-// Comparison function for qsort
-static int compare_players(const void* a, const void* b) {
-    const player_t* player_a = (const player_t*)a;
-    const player_t* player_b = (const player_t*)b;
-    return (int)(player_b->score - player_a->score);
-}
-
 static void draw_final_scoreboard(const game_state_t* game_state_ptr) {
-    // Create a copy of players to sort
-    player_t sorted_players[MAX_PLAYERS];
-    memcpy(sorted_players, game_state_ptr->players, sizeof(player_t) * game_state_ptr->player_count);
-
-    // Sort players by score
-    qsort(sorted_players, game_state_ptr->player_count, sizeof(player_t), compare_players);
+    // Sort player indices by score (desc). This preserves a stable mapping to original color pairs
+    // and avoids ambiguous name/score matches when there are duplicates.
+    typedef struct { unsigned int idx; unsigned int score; } player_idx_t;
+    player_idx_t order[MAX_PLAYERS];
+    for (unsigned int i = 0; i < game_state_ptr->player_count && i < MAX_PLAYERS; i++) {
+        order[i].idx = i;
+        order[i].score = game_state_ptr->players[i].score;
+    }
+    // Sort using file-scope comparator (score desc, index asc)
+    qsort(order, game_state_ptr->player_count, sizeof(player_idx_t), compare_player_idx_desc);
 
     // Clear screen and prepare for final display
     clear();
@@ -187,11 +194,11 @@ static void draw_final_scoreboard(const game_state_t* game_state_ptr) {
     wattroff(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_RED));
 
     // Header with color
-    wattron(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_WHITE));
+    wattron(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_ORANGE));
     mvwprintw(final_win, 3, 3, "Rank");
     mvwprintw(final_win, 3, 10, "Player");
     mvwprintw(final_win, 3, 35, "Final Score");
-    wattroff(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_WHITE));
+    wattroff(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_ORANGE));
 
     // Draw line under header
     mvwaddch(final_win, 4, 1, ACS_LTEE);
@@ -199,32 +206,24 @@ static void draw_final_scoreboard(const game_state_t* game_state_ptr) {
         mvwaddch(final_win, 4, i, ACS_HLINE);
     }
     mvwaddch(final_win, 4, final_w - 1, ACS_RTEE);
-    // Display players sorted by score, using each player's original color
+    // Display players sorted by score, using each player's original color pair
     for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
         int row = (int)i + 5;
-
-        // Find the original index of this player to use their original color
-        int orig_idx = -1;
-        for (unsigned int j = 0; j < game_state_ptr->player_count && j < MAX_PLAYERS; j++) {
-            if (strcmp(sorted_players[i].name, game_state_ptr->players[j].name) == 0
-                && sorted_players[i].score == game_state_ptr->players[j].score) {
-                orig_idx = (int)j;
-                break;
-            }
-        }
-
-        int color_pair_num = (orig_idx >= 0) ? (orig_idx + 1) : PLAYER_COLOR_WHITE;
+        unsigned int orig_idx_u = order[i].idx;
+        int color_pair_num = (int)orig_idx_u + 1;
 
         if (has_colors()) {
-            wattron(final_win, A_BOLD | COLOR_PAIR(color_pair_num));
+            attr_t a = COLOR_PAIR(color_pair_num);
+            if (color_pair_num <= PLAYER_COLOR_CYAN) a |= A_BOLD; // avoid bold on blue-bg pairs 8/9
+            wattron(final_win, a);
             mvwprintw(final_win, row, 3, "#%d", i + 1);
-            mvwprintw(final_win, row, 10, "%-20s", sorted_players[i].name);
-            mvwprintw(final_win, row, 35, "%u", sorted_players[i].score);
-            wattroff(final_win, A_BOLD | COLOR_PAIR(color_pair_num));
+            mvwprintw(final_win, row, 10, "%-20s", game_state_ptr->players[orig_idx_u].name);
+            mvwprintw(final_win, row, 35, "%u", game_state_ptr->players[orig_idx_u].score);
+            wattroff(final_win, a);
         } else {
             mvwprintw(final_win, row, 3, "#%d", i + 1);
-            mvwprintw(final_win, row, 10, "%-20s", sorted_players[i].name);
-            mvwprintw(final_win, row, 35, "%u", sorted_players[i].score);
+            mvwprintw(final_win, row, 10, "%-20s", game_state_ptr->players[orig_idx_u].name);
+            mvwprintw(final_win, row, 35, "%u", game_state_ptr->players[orig_idx_u].score);
         }
     }
     
@@ -252,9 +251,9 @@ void init_player_colors(void) {
         init_pair(PLAYER_COLOR_BLUE,       COLOR_BLUE,    COLOR_BLACK);
         init_pair(PLAYER_COLOR_MAGENTA,    COLOR_MAGENTA, COLOR_BLACK);
         init_pair(PLAYER_COLOR_CYAN,       COLOR_CYAN,    COLOR_BLACK);
-        init_pair(PLAYER_COLOR_WHITE,      COLOR_WHITE,   COLOR_BLACK);
-        init_pair(PLAYER_COLOR_RED_BLUE,   COLOR_RED,     COLOR_BLUE);
-        init_pair(PLAYER_COLOR_GREEN_BLUE, COLOR_GREEN,   COLOR_BLUE);
+        init_pair(PLAYER_COLOR_PURPLE,   COLOR_MAGENTA,  COLOR_BLACK);
+        init_pair(PLAYER_COLOR_DARK_GREEN, COLOR_GREEN,   COLOR_BLACK);
+        init_pair(PLAYER_COLOR_ORANGE,      COLOR_YELLOW,   COLOR_BLACK);
     }
 }
 
@@ -273,10 +272,13 @@ void draw_leaderboard(WINDOW* win, const game_state_t* game_state_ptr) {
         const player_t* p = &game_state_ptr->players[i];
         int row = (int)i + 2;
         
-        // Display player name with color
-        wattron(win, COLOR_PAIR(i + 1) | A_BOLD);
+        // Display player name with color; avoid A_BOLD for pairs 8 and 9
+        int pair_num = (int)i + 1;
+        attr_t name_attr = COLOR_PAIR(pair_num);
+        if (pair_num <= PLAYER_COLOR_CYAN) name_attr |= A_BOLD;
+        wattron(win, name_attr);
         mvwprintw(win, row, NAME_COLUMN_POS, "%-*s", NAME_FIELD_WIDTH, p->name);
-        wattroff(win, COLOR_PAIR(i + 1) | A_BOLD);
+        wattroff(win, name_attr);
         
         mvwprintw(win, row, SCORE_COLUMN_POS, SCORE_FORMAT, p->score);
         mvwprintw(win, row, VALID_COLUMN_POS, MOVES_FORMAT, p->valid_moves);
@@ -309,9 +311,12 @@ void draw_matrix(WINDOW* win, const game_state_t* game_state_ptr) {
             if (player_here) {
                 // Show "P" for current player position
                 if (has_colors()) {
-                    wattron(win, COLOR_PAIR(current_player + 1) | A_BOLD);
+                    int cp = current_player + 1;
+                    attr_t a = COLOR_PAIR(cp);
+                    if (cp <= PLAYER_COLOR_CYAN) a |= A_BOLD;
+                    wattron(win, a);
                     mvwprintw(win, row, col, PLAYER_MARKER_CHAR);
-                    wattroff(win, COLOR_PAIR(current_player + 1) | A_BOLD);
+                    wattroff(win, a);
                 } else {
                     mvwprintw(win, row, col, PLAYER_MARKER_CHAR);
                 }
@@ -322,9 +327,12 @@ void draw_matrix(WINDOW* win, const game_state_t* game_state_ptr) {
                 // Colored for values <= 0 (player territories)
                 int player_idx = -value;  // 0 -> player 0, -1 -> player 1, etc.
                 if (player_idx < MAX_PLAYERS && has_colors()) {
-                    wattron(win, COLOR_PAIR(player_idx + 1) | A_BOLD);
+                    int cp2 = player_idx + 1;
+                    attr_t a2 = COLOR_PAIR(cp2);
+                    if (cp2 <= PLAYER_COLOR_CYAN) a2 |= A_BOLD;
+                    wattron(win, a2);
                     mvwprintw(win, row, col, NUMBER_FORMAT, value);
-                    wattroff(win, COLOR_PAIR(player_idx + 1) | A_BOLD);
+                    wattroff(win, a2);
                 } else {
                     mvwprintw(win, row, col, NUMBER_FORMAT, value);
                 }
