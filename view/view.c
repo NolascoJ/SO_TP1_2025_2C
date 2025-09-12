@@ -1,4 +1,3 @@
-
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
 #define _GNU_SOURCE
@@ -18,6 +17,9 @@
 #include "../utils/game_sync.h"
 #include "../shared_memory/shm.h"
 #include "view.h"
+
+// Forward declaration for the new function
+static void draw_final_scoreboard(const game_state_t* game_state_ptr);
 
 // Global flag for window resize
 static volatile sig_atomic_t resize_needed = 0;
@@ -131,6 +133,11 @@ int main(int argc, char *argv[]) {
         // Exit if game is over
   
     }while(!is_over);
+
+    // Game is over, draw the final scoreboard
+    draw_final_scoreboard(game_state_ptr);
+
+    
     
     // Cleanup
     delwin(leaderboard_win);
@@ -143,6 +150,99 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+// Comparison function for qsort
+static int compare_players(const void* a, const void* b) {
+    const player_t* player_a = (const player_t*)a;
+    const player_t* player_b = (const player_t*)b;
+    return (int)(player_b->score - player_a->score);
+}
+
+static void draw_final_scoreboard(const game_state_t* game_state_ptr) {
+    // Create a copy of players to sort
+    player_t sorted_players[MAX_PLAYERS];
+    memcpy(sorted_players, game_state_ptr->players, sizeof(player_t) * game_state_ptr->player_count);
+
+    // Sort players by score
+    qsort(sorted_players, game_state_ptr->player_count, sizeof(player_t), compare_players);
+
+    // Clear screen and prepare for final display
+    clear();
+    refresh();
+
+    int scr_h, scr_w;
+    getmaxyx(stdscr, scr_h, scr_w);
+
+    // Calculate window size with extra space for the "Press any key" message
+    int final_h = (int)game_state_ptr->player_count + 8; // More space for message
+    int final_w = 60;
+    int final_y = (scr_h - final_h) / 2;
+    int final_x = (scr_w - final_w) / 2;
+
+    WINDOW* final_win = newwin(final_h, final_w, final_y, final_x);
+    box(final_win, 0, 0);
+
+    // Title with color
+    wattron(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_RED));
+    mvwprintw(final_win, 1, (final_w - 11) / 2, "GAME OVER!");
+    wattroff(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_RED));
+
+    // Header with color
+    wattron(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_WHITE));
+    mvwprintw(final_win, 3, 3, "Rank");
+    mvwprintw(final_win, 3, 10, "Player");
+    mvwprintw(final_win, 3, 35, "Final Score");
+    wattroff(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_WHITE));
+
+    // Draw line under header
+    mvwaddch(final_win, 4, 1, ACS_LTEE);
+    for (int i = 2; i < final_w - 1; i++) {
+        mvwaddch(final_win, 4, i, ACS_HLINE);
+    }
+    mvwaddch(final_win, 4, final_w - 1, ACS_RTEE);
+    // Display players sorted by score, using each player's original color
+    for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
+        int row = (int)i + 5;
+
+        // Find the original index of this player to use their original color
+        int orig_idx = -1;
+        for (unsigned int j = 0; j < game_state_ptr->player_count && j < MAX_PLAYERS; j++) {
+            if (strcmp(sorted_players[i].name, game_state_ptr->players[j].name) == 0
+                && sorted_players[i].score == game_state_ptr->players[j].score) {
+                orig_idx = (int)j;
+                break;
+            }
+        }
+
+        int color_pair_num = (orig_idx >= 0) ? (orig_idx + 1) : PLAYER_COLOR_WHITE;
+
+        if (has_colors()) {
+            wattron(final_win, A_BOLD | COLOR_PAIR(color_pair_num));
+            mvwprintw(final_win, row, 3, "#%d", i + 1);
+            mvwprintw(final_win, row, 10, "%-20s", sorted_players[i].name);
+            mvwprintw(final_win, row, 35, "%u", sorted_players[i].score);
+            wattroff(final_win, A_BOLD | COLOR_PAIR(color_pair_num));
+        } else {
+            mvwprintw(final_win, row, 3, "#%d", i + 1);
+            mvwprintw(final_win, row, 10, "%-20s", sorted_players[i].name);
+            mvwprintw(final_win, row, 35, "%u", sorted_players[i].score);
+        }
+    }
+    
+    // Instructions at the bottom with color
+    int instruction_row = 5 + (int)game_state_ptr->player_count + 1; // One row below last player
+    wattron(final_win, A_BLINK | COLOR_PAIR(PLAYER_COLOR_GREEN));
+    mvwprintw(final_win, instruction_row, (final_w - 25) / 2, "Press any key to exit...");
+    wattroff(final_win, A_BLINK | COLOR_PAIR(PLAYER_COLOR_GREEN));
+    
+    wrefresh(final_win);
+
+    // Wait for any key press to exit
+    nodelay(stdscr, FALSE); // Make getch() wait for input
+    getch();
+
+    delwin(final_win);
+}
+
 void init_player_colors(void) {
     if (has_colors()) {
         start_color();
@@ -152,7 +252,7 @@ void init_player_colors(void) {
         init_pair(PLAYER_COLOR_BLUE,       COLOR_BLUE,    COLOR_BLACK);
         init_pair(PLAYER_COLOR_MAGENTA,    COLOR_MAGENTA, COLOR_BLACK);
         init_pair(PLAYER_COLOR_CYAN,       COLOR_CYAN,    COLOR_BLACK);
-        init_pair(PLAYER_COLOR_WHITE,      COLOR_BLUE,   COLOR_RED);
+        init_pair(PLAYER_COLOR_WHITE,      COLOR_WHITE,   COLOR_BLACK);
         init_pair(PLAYER_COLOR_RED_BLUE,   COLOR_RED,     COLOR_BLUE);
         init_pair(PLAYER_COLOR_GREEN_BLUE, COLOR_GREEN,   COLOR_BLUE);
     }

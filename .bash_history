@@ -380,3 +380,86 @@ make clean all
 ./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player2  -d 40  -w 10 -h 10 
 ./master/ChompChamps -v ./bin/view -p ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player  ./bin/player2  -d 40  -w 10 -h 10 
 exit
+make clean
+make all
+./bin/master -v ./bin/view -w 20 -h 20 -d 300 -p ./bin/player ./bin/player ./bin/player
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player
+make clean all
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player
+make clean all
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player2
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player2
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player2
+make clean all
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player2
+make clean all
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player2
+make clean all
+./bin/master -v ./bin/view -w 20 -h 20 -d 100 -p ./bin/player ./bin/player ./bin/player2
+make clean all
+./bin/master -v ./bin/view -w 20 -h 20 -d 20 -p ./bin/player ./bin/player ./bin/player2
+make run
+make clean all
+make run d=20
+make run d=20
+make clean all
+make run d=20
+make run d=20
+make run d=20
+make run d=20
+make run d=20
+make run d=20
+make run d=100
+make run d=300
+make run d=300
+make run d=300
+make run d=300
+make run d=300
+make clean all
+echo $TERM
+exit
+make clean all
+make run d=3
+make run d=3
+make run d=3
+make clean all
+make run d=3
+make run d=3
+make clean all
+make run d=3
+make run d=3
+make clean all
+make run d=3
+make run d=3
+make run d=3
+make run d=3
+make run d=3
+make run d=3
+make run d=3
+make clean all
+make run d=3
+make clean all
+make run d=3
+echo $TERM
+exit
+make clean all
+make run d=3
+make clean all
+
+./bin/master -v ./bin/view -w 20 -h 20 -d 20 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player
+./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
+./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
+./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
+./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
+./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
+./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
+make clean all
+make clean all
+make clean all
+./bin/master -v ./bin/view -w 20 -h 20 -d 70 -p ./bin/player ./bin/player ./bin/player2 ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player2
+make clean
+exit

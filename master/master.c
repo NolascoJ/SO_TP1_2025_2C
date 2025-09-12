@@ -221,14 +221,16 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
         return 1; // state changed (invalid move counter)
     }
 
+    // Mark the old cell as visited by this player
+    int old_idx = cury * width + curx;
+    game_state_ptr->board_data[old_idx] = -((int)player_idx);
+
     // Update player values for valid move
     game_state_ptr->players[player_idx].valid_moves++;
     game_state_ptr->players[player_idx].score += (unsigned int)cell_value;
-    game_state_ptr->board_data[idx] = -((int)player_idx); 
+    game_state_ptr->board_data[idx] = -((int)player_idx);
     game_state_ptr->players[player_idx].x_coord = (unsigned short)next_x;
-    game_state_ptr->players[player_idx].y_coord = (unsigned short)next_y;
-
-    // Update last valid move timestamp
+    game_state_ptr->players[player_idx].y_coord = (unsigned short)next_y;    // Update last valid move timestamp
     if (last_valid_move_time != NULL) {
         *last_valid_move_time = time(NULL);
     }
