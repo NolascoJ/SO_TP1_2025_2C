@@ -1,12 +1,21 @@
 #ifndef VIEW_H
 #define VIEW_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <semaphore.h>
 #include <ncurses.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <errno.h>
 #include "../utils/game_state.h"
-
-
-
-
+#include "../utils/game_sync.h"
+#include "../shared_memory/shm.h"
 
 // UI Layout Constants
 #define DEFAULT_LEADERBOARD_WIDTH 44
@@ -34,6 +43,30 @@
 #define PLAYER_COLOR_DARK_GREEN 8
 #define PLAYER_COLOR_ORANGE 9
 
+// Final Scoreboard Layout Constants
+#define FINAL_SCOREBOARD_WIDTH 60
+#define FINAL_SCOREBOARD_EXTRA_HEIGHT 8
+#define FINAL_TITLE_ROW 1
+#define FINAL_HEADER_ROW 3
+#define FINAL_SEPARATOR_ROW 4
+#define FINAL_PLAYERS_START_ROW 5
+#define FINAL_RANK_COLUMN 3
+#define FINAL_PLAYER_COLUMN 10
+#define FINAL_SCORE_COLUMN 35
+#define FINAL_PLAYER_NAME_WIDTH 20
+#define GAME_OVER_TEXT_LENGTH 11
+#define PRESS_KEY_TEXT_LENGTH 25
+
+// General Layout Constants  
+#define EXPECTED_ARGC 3
+#define REQUIRED_ARGS 2
+#define LEADERBOARD_HEADER_ROWS 3
+#define CURSOR_HIDDEN 0
+#define TERM_256_COLOR 1
+#define EXIT_SUCCESS_CODE 0
+#define EXIT_ERROR_CODE 1
+#define SEM_WAIT_SUCCESS 0
+
 // Player Position Display
 #define PLAYER_MARKER_CHAR "  P"
 #define NUMBER_FORMAT "%3d"
@@ -50,7 +83,12 @@ void init_player_colors(void);
 
 void draw_final_scoreboard(const game_state_t* game_state_ptr);
 
-typedef struct { unsigned int idx; unsigned int score; } player_idx_t;
+typedef struct {
+    unsigned int idx;
+    unsigned int score;
+    unsigned int valid_moves;
+    unsigned int invalid_moves;
+} player_idx_t;
 int compare_player_idx_desc(const void* a, const void* b);
 
 #endif

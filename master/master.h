@@ -2,10 +2,19 @@
 #define MASTER_H
 
 #include <sys/select.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <semaphore.h>
+#include <string.h>
 #include <time.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "../utils/game_config.h"
 #include "../utils/game_state.h"
 #include "../utils/game_sync.h"
+#include "../shared_memory/shm.h"
+#include "../utils/socket_utils.h"
 
 void execute_process(const char *path, unsigned int width, unsigned int height);
 void set_game_over(game_sync_t* game_sync_ptr, game_state_t* game_state_ptr);

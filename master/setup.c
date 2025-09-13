@@ -2,10 +2,6 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
 
 #include "setup.h"
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <semaphore.h>
 #include "master.h"
 
 // Private functions - only visible within this file

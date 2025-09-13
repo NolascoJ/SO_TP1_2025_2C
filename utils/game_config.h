@@ -13,6 +13,7 @@
 #define DEFAULT_HEIGHT 10
 #define DEFAULT_DELAY 200 //ms
 #define DEFAULT_TIMEOUT 10 //s
+#define DEFAULT_SEED time(NULL)
 #define DEFAULT_VIEW_PATH NULL
 #define MIN_PLAYERS 1
 #define MAX_PLAYERS 9

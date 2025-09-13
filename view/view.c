@@ -1,18 +1,7 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <semaphore.h>
-#include <ncurses.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <errno.h>
+#include "view.h"
 #include "../utils/game_state.h"
 #include "../utils/game_sync.h"
 #include "../shared_memory/shm.h"
@@ -21,14 +10,14 @@
 static volatile sig_atomic_t resize_needed = 0;
 
 static void handle_resize(int sig) {
-    (void)sig; // Unused parameter
+    (void)sig; 
     resize_needed = 1;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "view2: expected 2 argame_state: <width> <height>\n");
-        return 1;
+    if (argc != EXPECTED_ARGC) {
+        fprintf(stderr, "view2: expected %d argame_state: <width> <height>\n", REQUIRED_ARGS);
+        return EXIT_ERROR_CODE;
     }
     
     int game_width = atoi(argv[1]);
@@ -44,9 +33,9 @@ int main(int argc, char *argv[]) {
     int sync_fd;
     game_sync_t* sync_ptr = shm_open_and_map("/game_sync", sync_size, &sync_fd, O_RDWR);
     
-    // Initialize ncurses
+    // Initialize ncurses in terminal
     if (getenv("TERM") == NULL) {
-        setenv("TERM", "xterm-256color", 1);
+        setenv("TERM", "xterm-256color", TERM_256_COLOR);
     }
 
     SCREEN *screen = newterm(NULL, stdout, stdin);
@@ -54,12 +43,12 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "view: failed to initialize ncurses screen\n");
         shm_close(sync_ptr, sync_size, sync_fd);
         shm_close(game_state_ptr, game_state_size, game_state_fd);
-        return 1;
+        return EXIT_ERROR_CODE;
     }
     set_term(screen);
     cbreak();
     noecho();
-    curs_set(0);
+    curs_set(CURSOR_HIDDEN);
     keypad(stdscr, TRUE);
     
     init_player_colors();
@@ -70,7 +59,7 @@ int main(int argc, char *argv[]) {
     getmaxyx(stdscr, scr_h, scr_w);
     
     // Layout: leaderboard at top, matrix below
-    int leaderboard_h = (int)game_state_ptr->player_count + 3;  // Header + actual players + borders
+    int leaderboard_h = (int)game_state_ptr->player_count + LEADERBOARD_HEADER_ROWS;  // Header + actual players + borders
     int leaderboard_w = DEFAULT_LEADERBOARD_WIDTH;
     int leaderboard_y = LEADERBOARD_START_Y;
     int leaderboard_x = (scr_w - leaderboard_w) / 2;
@@ -91,21 +80,19 @@ int main(int argc, char *argv[]) {
     do{
         // Wait for master signal
         int sem_result = sem_wait(&sync_ptr->master_to_view);
-        if (sem_result != 0) {
+        if (sem_result != SEM_WAIT_SUCCESS) {
             // If interrupted by signal, continue the loop
             if (errno == EINTR) {
                 continue;  // Go back to start of loop
             }
-            break;  // Other errors, exit
+            break; 
         }
         
-        // Handle window resize if needed
         if (resize_needed) {
             resize_needed = 0;
             handle_adaptive_resize(&scr_h, &scr_w, game_width, game_height, game_state_ptr, &leaderboard_win, &matrix_win);
         }
         
-        // Draw components
         draw_leaderboard(leaderboard_win, game_state_ptr);
         draw_matrix(matrix_win, game_state_ptr);
         
@@ -128,29 +115,27 @@ int main(int argc, char *argv[]) {
     // Game is over, draw the final scoreboard
     draw_final_scoreboard(game_state_ptr);
 
-    
-    
-    // Cleanup
+    // Cleanup of resources
     delwin(leaderboard_win);
     delwin(matrix_win);
     endwin();
     delscreen(screen);
 
-    
     shm_close(sync_ptr, sync_size, sync_fd);
     shm_close(game_state_ptr, game_state_size, game_state_fd);
     
-    return 0;
+    return EXIT_SUCCESS_CODE;
 }
 
  void draw_final_scoreboard(const game_state_t* game_state_ptr) {
-    // Sort player indices by score (desc). This preserves a stable mapping to original color pairs
-    // and avoids ambiguous name/score matches when there are duplicates.
-    typedef struct { unsigned int idx; unsigned int score; } player_idx_t;
+    // Sort player indices by score descending.
+
     player_idx_t order[MAX_PLAYERS];
     for (unsigned int i = 0; i < game_state_ptr->player_count && i < MAX_PLAYERS; i++) {
         order[i].idx = i;
         order[i].score = game_state_ptr->players[i].score;
+        order[i].valid_moves = game_state_ptr->players[i].valid_moves;
+        order[i].invalid_moves = game_state_ptr->players[i].invalid_moves;
     }
     // Sort using file-scope comparator (score desc, index asc)
     qsort(order, game_state_ptr->player_count, sizeof(player_idx_t), compare_player_idx_desc);
@@ -163,8 +148,8 @@ int main(int argc, char *argv[]) {
     getmaxyx(stdscr, scr_h, scr_w);
 
     // Calculate window size with extra space for the "Press any key" message
-    int final_h = (int)game_state_ptr->player_count + 8; // More space for message
-    int final_w = 60;
+    int final_h = (int)game_state_ptr->player_count + FINAL_SCOREBOARD_EXTRA_HEIGHT;
+    int final_w = FINAL_SCOREBOARD_WIDTH;
     int final_y = (scr_h - final_h) / 2;
     int final_x = (scr_w - final_w) / 2;
 
@@ -173,25 +158,25 @@ int main(int argc, char *argv[]) {
 
     // Title with color
     wattron(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_RED));
-    mvwprintw(final_win, 1, (final_w - 11) / 2, "GAME OVER!");
+    mvwprintw(final_win, FINAL_TITLE_ROW, (final_w - GAME_OVER_TEXT_LENGTH) / 2, "GAME OVER!");
     wattroff(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_RED));
 
     // Header with color
     wattron(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_ORANGE));
-    mvwprintw(final_win, 3, 3, "Rank");
-    mvwprintw(final_win, 3, 10, "Player");
-    mvwprintw(final_win, 3, 35, "Final Score");
+    mvwprintw(final_win, FINAL_HEADER_ROW, FINAL_RANK_COLUMN, "Rank");
+    mvwprintw(final_win, FINAL_HEADER_ROW, FINAL_PLAYER_COLUMN, "Player");
+    mvwprintw(final_win, FINAL_HEADER_ROW, FINAL_SCORE_COLUMN, "Final Score");
     wattroff(final_win, A_BOLD | COLOR_PAIR(PLAYER_COLOR_ORANGE));
 
     // Draw line under header
-    mvwaddch(final_win, 4, 1, ACS_LTEE);
+    mvwaddch(final_win, FINAL_SEPARATOR_ROW, 1, ACS_LTEE);
     for (int i = 2; i < final_w - 1; i++) {
-        mvwaddch(final_win, 4, i, ACS_HLINE);
+        mvwaddch(final_win, FINAL_SEPARATOR_ROW, i, ACS_HLINE);
     }
-    mvwaddch(final_win, 4, final_w - 1, ACS_RTEE);
+    mvwaddch(final_win, FINAL_SEPARATOR_ROW, final_w - 1, ACS_RTEE);
     // Display players sorted by score, using each player's original color pair
     for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
-        int row = (int)i + 5;
+        int row = (int)i + FINAL_PLAYERS_START_ROW;
         unsigned int orig_idx_u = order[i].idx;
         int color_pair_num = (int)orig_idx_u + 1;
 
@@ -199,21 +184,21 @@ int main(int argc, char *argv[]) {
             attr_t a = COLOR_PAIR(color_pair_num);
             if (color_pair_num <= PLAYER_COLOR_CYAN) a |= A_BOLD; // avoid bold on blue-bg pairs 8/9
             wattron(final_win, a);
-            mvwprintw(final_win, row, 3, "#%d", (int)i + 1);
-            mvwprintw(final_win, row, 10, "%-20s", game_state_ptr->players[orig_idx_u].name);
-            mvwprintw(final_win, row, 35, "%u", game_state_ptr->players[orig_idx_u].score);
+            mvwprintw(final_win, row, FINAL_RANK_COLUMN, "#%d", (int)i + 1);
+            mvwprintw(final_win, row, FINAL_PLAYER_COLUMN, "%-*s", FINAL_PLAYER_NAME_WIDTH, game_state_ptr->players[orig_idx_u].name);
+            mvwprintw(final_win, row, FINAL_SCORE_COLUMN, "%u", game_state_ptr->players[orig_idx_u].score);
             wattroff(final_win, a);
         } else {
-            mvwprintw(final_win, row, 3, "#%d", (int)i + 1);
-            mvwprintw(final_win, row, 10, "%-20s", game_state_ptr->players[orig_idx_u].name);
-            mvwprintw(final_win, row, 35, "%u", game_state_ptr->players[orig_idx_u].score);
+            mvwprintw(final_win, row, FINAL_RANK_COLUMN, "#%d", (int)i + 1);
+            mvwprintw(final_win, row, FINAL_PLAYER_COLUMN, "%-*s", FINAL_PLAYER_NAME_WIDTH, game_state_ptr->players[orig_idx_u].name);
+            mvwprintw(final_win, row, FINAL_SCORE_COLUMN, "%u", game_state_ptr->players[orig_idx_u].score);
         }
     }
     
     // Instructions at the bottom with color
-    int instruction_row = 5 + (int)game_state_ptr->player_count + 1; // One row below last player
+    int instruction_row = FINAL_PLAYERS_START_ROW + (int)game_state_ptr->player_count + 1; // One row below last player
     wattron(final_win, A_BLINK | COLOR_PAIR(PLAYER_COLOR_GREEN));
-    mvwprintw(final_win, instruction_row, (final_w - 25) / 2, "Press any key to exit...");
+    mvwprintw(final_win, instruction_row, (final_w - PRESS_KEY_TEXT_LENGTH) / 2, "Press any key to exit...");
     wattroff(final_win, A_BLINK | COLOR_PAIR(PLAYER_COLOR_GREEN));
     
     wrefresh(final_win);
@@ -370,7 +355,22 @@ void handle_adaptive_resize(int *scr_h, int *scr_w, int game_width, int game_hei
 int compare_player_idx_desc(const void* a, const void* b) {
     const player_idx_t* pa = (const player_idx_t*)a;
     const player_idx_t* pb = (const player_idx_t*)b;
-    if (pb->score != pa->score) return (pb->score > pa->score) - (pb->score < pa->score);
-    // tie-breaker: lower original index first for stability
+
+    //Higher score wins
+    if (pb->score != pa->score) {
+        return (pb->score > pa->score) - (pb->score < pa->score);
+    }
+
+    //Fewer valid moves wins
+    if (pa->valid_moves != pb->valid_moves) {
+        return (pa->valid_moves > pb->valid_moves) - (pa->valid_moves < pb->valid_moves);
+    }
+
+    //Fewer invalid moves wins
+    if (pa->invalid_moves != pb->invalid_moves) {
+        return (pa->invalid_moves > pb->invalid_moves) - (pa->invalid_moves < pb->invalid_moves);
+    }
+
+    //Final tie-breaker: maintain stable order by original index
     return (pa->idx > pb->idx) - (pa->idx < pb->idx);
 }

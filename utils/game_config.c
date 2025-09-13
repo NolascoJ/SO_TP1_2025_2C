@@ -24,7 +24,7 @@ game_config_t parse_arguments(int argc, char* argv[]) {
         .height = DEFAULT_HEIGHT,
         .delay = DEFAULT_DELAY,
         .timeout = DEFAULT_TIMEOUT,
-        .seed = time(NULL),
+        .seed = DEFAULT_SEED,
         .view_path = DEFAULT_VIEW_PATH,
         .player_count = 0,
         .player_path = {NULL}

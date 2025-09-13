@@ -2,9 +2,6 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
 
 #include "socket_utils.h"
-#include <stdio.h>
-#include <sys/select.h>
-#include <sys/time.h>
 
 int init_fd_set(fd_set* readfds, int fds[], unsigned int count) {
     FD_ZERO(readfds);

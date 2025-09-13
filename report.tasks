@@ -1,4 +1,0 @@
-pvs-studio.com/en/docs/warnings/	1	err	Help: The documentation for all analyzer warnings is available here: https://pvs-studio.com/en/docs/warnings/.
-/root/player/player3.c	69	err	V522 Dereferencing of the null pointer 'players' might take place. The null pointer is passed into 'calcularDistanciasBFS' function. Inspect the second argument. Check lines: 69, 112, 260.
-/root/player/player3.c	354	warn	V1031 The 'fasePerimetro' function is not declared. Passing data to or from this function can be affected.
-/root/player/player3.c	552	warn	V1031 The 'fasePerimetro' function is not declared. Passing data to or from this function can be affected.
