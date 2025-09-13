@@ -1,0 +1,15 @@
+==3243== Memcheck, a memory error detector
+==3243== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==3243== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==3243== Command: bin/player 12 12
+==3243== Parent PID: 3241
+==3243== 
+==3243== 
+==3243== HEAP SUMMARY:
+==3243==     in use at exit: 0 bytes in 0 blocks
+==3243==   total heap usage: 0 allocs, 0 frees, 0 bytes allocated
+==3243== 
+==3243== All heap blocks were freed -- no leaks are possible
+==3243== 
+==3243== For lists of detected and suppressed errors, rerun with: -s
+==3243== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

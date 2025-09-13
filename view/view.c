@@ -18,23 +18,8 @@
 #include "../shared_memory/shm.h"
 #include "view.h"
 
-// Forward declaration for the new function
-static void draw_final_scoreboard(const game_state_t* game_state_ptr);
-
-// Helper type and comparator used for final scoreboard sorting
-typedef struct { unsigned int idx; unsigned int score; } player_idx_t;
-static int compare_player_idx_desc(const void* a, const void* b) {
-    const player_idx_t* pa = (const player_idx_t*)a;
-    const player_idx_t* pb = (const player_idx_t*)b;
-    if (pb->score != pa->score) return (pb->score > pa->score) - (pb->score < pa->score);
-    // tie-breaker: lower original index first for stability
-    return (pa->idx > pb->idx) - (pa->idx < pb->idx);
-}
-
-// Global flag for window resize
 static volatile sig_atomic_t resize_needed = 0;
 
-// Signal handler for window resize
 static void handle_resize(int sig) {
     (void)sig; // Unused parameter
     resize_needed = 1;
@@ -48,41 +33,37 @@ int main(int argc, char *argv[]) {
     
     int game_width = atoi(argv[1]);
     int game_height = atoi(argv[2]);
-    
+
     // Map game state
     size_t game_state_size = sizeof(game_state_t) + (size_t)game_width * (size_t)game_height * sizeof(int);
-    int game_state_fd = -1;
-    void* game_state_map = shm_open_and_map("/game_state", game_state_size, &game_state_fd, O_RDONLY);
-    if (game_state_map == NULL) {
-        return 1;
-    }
-    const game_state_t* game_state_ptr = (const game_state_t*)game_state_map;
+    int game_state_fd;
+    game_state_t* game_state_ptr = shm_open_and_map("/game_state", game_state_size, &game_state_fd, O_RDONLY);
     
     // Map sync
     size_t sync_size = sizeof(game_sync_t);
-    int sync_fd = -1;
-    void* sync_map = shm_open_and_map("/game_sync", sync_size, &sync_fd, O_RDWR);
-    if (sync_map == NULL) {
-        shm_close(game_state_map, game_state_size, game_state_fd);
-        return 1;
-    }
-    game_sync_t* sync_ptr = (game_sync_t*)sync_map;
+    int sync_fd;
+    game_sync_t* sync_ptr = shm_open_and_map("/game_sync", sync_size, &sync_fd, O_RDWR);
     
     // Initialize ncurses
     if (getenv("TERM") == NULL) {
         setenv("TERM", "xterm-256color", 1);
     }
-    
-    initscr();
+
+    SCREEN *screen = newterm(NULL, stdout, stdin);
+    if (screen == NULL) {
+        fprintf(stderr, "view: failed to initialize ncurses screen\n");
+        shm_close(sync_ptr, sync_size, sync_fd);
+        shm_close(game_state_ptr, game_state_size, game_state_fd);
+        return 1;
+    }
+    set_term(screen);
     cbreak();
     noecho();
     curs_set(0);
     keypad(stdscr, TRUE);
     
-    // Initialize colors
     init_player_colors();
     
-    // Register signal handler for window resize
     signal(SIGWINCH, handle_resize);
     
     int scr_h, scr_w;
@@ -153,14 +134,16 @@ int main(int argc, char *argv[]) {
     delwin(leaderboard_win);
     delwin(matrix_win);
     endwin();
+    delscreen(screen);
+
     
-    shm_close(sync_map, sync_size, sync_fd);
-    shm_close(game_state_map, game_state_size, game_state_fd);
+    shm_close(sync_ptr, sync_size, sync_fd);
+    shm_close(game_state_ptr, game_state_size, game_state_fd);
     
     return 0;
 }
 
-static void draw_final_scoreboard(const game_state_t* game_state_ptr) {
+ void draw_final_scoreboard(const game_state_t* game_state_ptr) {
     // Sort player indices by score (desc). This preserves a stable mapping to original color pairs
     // and avoids ambiguous name/score matches when there are duplicates.
     typedef struct { unsigned int idx; unsigned int score; } player_idx_t;
@@ -216,12 +199,12 @@ static void draw_final_scoreboard(const game_state_t* game_state_ptr) {
             attr_t a = COLOR_PAIR(color_pair_num);
             if (color_pair_num <= PLAYER_COLOR_CYAN) a |= A_BOLD; // avoid bold on blue-bg pairs 8/9
             wattron(final_win, a);
-            mvwprintw(final_win, row, 3, "#%d", i + 1);
+            mvwprintw(final_win, row, 3, "#%d", (int)i + 1);
             mvwprintw(final_win, row, 10, "%-20s", game_state_ptr->players[orig_idx_u].name);
             mvwprintw(final_win, row, 35, "%u", game_state_ptr->players[orig_idx_u].score);
             wattroff(final_win, a);
         } else {
-            mvwprintw(final_win, row, 3, "#%d", i + 1);
+            mvwprintw(final_win, row, 3, "#%d", (int)i + 1);
             mvwprintw(final_win, row, 10, "%-20s", game_state_ptr->players[orig_idx_u].name);
             mvwprintw(final_win, row, 35, "%u", game_state_ptr->players[orig_idx_u].score);
         }
@@ -382,4 +365,12 @@ void handle_adaptive_resize(int *scr_h, int *scr_w, int game_width, int game_hei
     // Create new windows with fixed sizes
     *leaderboard_win = newwin(leaderboard_h, leaderboard_w, leaderboard_y, leaderboard_x);
     *matrix_win = newwin(matrix_h, matrix_w, matrix_y, matrix_x);
+}
+
+int compare_player_idx_desc(const void* a, const void* b) {
+    const player_idx_t* pa = (const player_idx_t*)a;
+    const player_idx_t* pb = (const player_idx_t*)b;
+    if (pb->score != pa->score) return (pb->score > pa->score) - (pb->score < pa->score);
+    // tie-breaker: lower original index first for stability
+    return (pa->idx > pb->idx) - (pa->idx < pb->idx);
 }

@@ -48,4 +48,9 @@ void handle_adaptive_resize(int *scr_h, int *scr_w, int game_width, int game_hei
                            const game_state_t* gs_ptr, WINDOW **leaderboard_win, WINDOW **matrix_win);
 void init_player_colors(void);
 
+void draw_final_scoreboard(const game_state_t* game_state_ptr);
+
+typedef struct { unsigned int idx; unsigned int score; } player_idx_t;
+int compare_player_idx_desc(const void* a, const void* b);
+
 #endif
