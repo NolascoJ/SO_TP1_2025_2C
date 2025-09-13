@@ -1,5 +1,5 @@
-#ifndef SOCKET_UTILS_H
-#define SOCKET_UTILS_H
+#ifndef SELECT_UTILS_H
+#define SELECT_UTILS_H
 
 #include <stdio.h>
 #include <sys/select.h>
@@ -8,4 +8,4 @@
 int init_fd_set(fd_set* readfds, int fds[], unsigned int count);
 int wait_for_fds(int max_fd, fd_set* readfds, unsigned int timeout);
 
-#endif // SOCKET_UTILS_H
+#endif // SELECT_UTILS_H

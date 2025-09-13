@@ -2,8 +2,8 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
 #define _GNU_SOURCE
 #include "view.h"
-#include "../utils/game_state.h"
-#include "../utils/game_sync.h"
+#include "../common/game_state.h"
+#include "../common/game_sync.h"
 #include "../shared_memory/shm.h"
 #include "view.h"
 

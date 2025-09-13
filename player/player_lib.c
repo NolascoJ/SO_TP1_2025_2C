@@ -5,66 +5,10 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
-// Implementaciones compartidas por todos los jugadores. No definir `getMove` aquí;
-// cada jugador debe definir su propia versión en su archivo de jugador. 
+// Shared player implementation. Each player must define their own getMove() function.
 
-void cleanup_resources(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
-                      size_t state_size, size_t sync_size, int state_fd, int sync_fd) {
-    if (game_state_ptr) {
-        shm_close(game_state_ptr, state_size, state_fd);
-    }
-    if (game_sync_ptr) {
-        shm_close(game_sync_ptr, sync_size, sync_fd);
-    }
-}
+// Shared main function for all players - calls player-specific getMove() implementation.
 
-int getMe(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr) {
-    pid_t pid = getpid();
-
- 
-    sem_wait(&game_sync_ptr->game_state_mutex);
-
-    for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
-        if (game_state_ptr->players[i].pid == pid) {
-            sem_post(&game_sync_ptr->game_state_mutex);
-            return (int)i; 
-        }
-    }
-
-    sem_post(&game_sync_ptr->game_state_mutex);
-    perror("Player not found in game state - this should not happen!");
-    return -1;  // Return invalid index to indicate error
-}
-
-void acquire_read_lock(game_sync_t* game_sync_ptr, int me) {
-    sem_wait(&game_sync_ptr->player_semaphores[me]); // semáforo por jugador
-    sem_wait(&game_sync_ptr->master_mutex); // mutex para evitar inanición del máster
-    sem_post(&game_sync_ptr->master_mutex); // libero mutex
-    sem_wait(&game_sync_ptr->readers_count_mutex); // mutex para la variable readers_count
-    game_sync_ptr->readers_count++;
-    if (game_sync_ptr->readers_count == 1) {
-        sem_wait(&game_sync_ptr->game_state_mutex); // alguien está leyendo, bloquea al máster
-    }
-    sem_post(&game_sync_ptr->readers_count_mutex);
-}
-
-void release_read_lock(game_sync_t* game_sync_ptr) {
-    sem_wait(&game_sync_ptr->readers_count_mutex);
-    game_sync_ptr->readers_count--;
-    if (game_sync_ptr->readers_count == 0) {
-        sem_post(&game_sync_ptr->game_state_mutex); // ya no hay lectores
-    }
-    sem_post(&game_sync_ptr->readers_count_mutex);
-}
-
-void take_snapshot(game_state_t* game_state_ptr, player_t* playerList, game_state_t* state, int gameWidth, int gameHeight) {
-    memcpy(playerList, game_state_ptr->players, sizeof(playerList[0]) * game_state_ptr->player_count);
-    memcpy(state, game_state_ptr, sizeof(game_state_t) + sizeof(int) * gameWidth * gameHeight);
-}
-
-// Main compartido para todos los jugadores. Llama a la función getMove definida
-// en cada implementación concreta del jugador (player.c). Se reutiliza la lógica
-// de acceso a memoria compartida y sincronización ya presente en este archivo.
 int main(int argc, char* argv[]) {
 
     if (argc < 3) {
@@ -123,4 +67,58 @@ int main(int argc, char* argv[]) {
 
     cleanup_resources(game_state_ptr, game_sync_ptr, shm_state_size, shm_sync_size, game_state_fd, game_sync_fd);
     return 0;
+}
+
+void cleanup_resources(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
+                      size_t state_size, size_t sync_size, int state_fd, int sync_fd) {
+    if (game_state_ptr) {
+        shm_close(game_state_ptr, state_size, state_fd);
+    }
+    if (game_sync_ptr) {
+        shm_close(game_sync_ptr, sync_size, sync_fd);
+    }
+}
+
+int getMe(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr) {
+    pid_t pid = getpid();
+
+ 
+    sem_wait(&game_sync_ptr->game_state_mutex);
+
+    for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
+        if (game_state_ptr->players[i].pid == pid) {
+            sem_post(&game_sync_ptr->game_state_mutex);
+            return (int)i; 
+        }
+    }
+
+    sem_post(&game_sync_ptr->game_state_mutex);
+    perror("Player not found in game state - this should not happen!");
+    return -1;  // Return invalid index to indicate error
+}
+
+void acquire_read_lock(game_sync_t* game_sync_ptr, int me) {
+    sem_wait(&game_sync_ptr->player_semaphores[me]); // semáforo por jugador
+    sem_wait(&game_sync_ptr->master_mutex); // mutex para evitar inanición del máster
+    sem_post(&game_sync_ptr->master_mutex); // libero mutex
+    sem_wait(&game_sync_ptr->readers_count_mutex); // mutex para la variable readers_count
+    game_sync_ptr->readers_count++;
+    if (game_sync_ptr->readers_count == 1) {
+        sem_wait(&game_sync_ptr->game_state_mutex); // alguien está leyendo, bloquea al máster
+    }
+    sem_post(&game_sync_ptr->readers_count_mutex);
+}
+
+void release_read_lock(game_sync_t* game_sync_ptr) {
+    sem_wait(&game_sync_ptr->readers_count_mutex);
+    game_sync_ptr->readers_count--;
+    if (game_sync_ptr->readers_count == 0) {
+        sem_post(&game_sync_ptr->game_state_mutex); // ya no hay lectores
+    }
+    sem_post(&game_sync_ptr->readers_count_mutex);
+}
+
+void take_snapshot(game_state_t* game_state_ptr, player_t* playerList, game_state_t* state, int gameWidth, int gameHeight) {
+    memcpy(playerList, game_state_ptr->players, sizeof(playerList[0]) * game_state_ptr->player_count);
+    memcpy(state, game_state_ptr, sizeof(game_state_t) + sizeof(int) * gameWidth * gameHeight);
 }

@@ -6,8 +6,8 @@
 #include <semaphore.h>
 #include <string.h>
 
-#include "../utils/game_state.h"
-#include "../utils/game_sync.h"
+#include "../common/game_state.h"
+#include "../common/game_sync.h"
 #include "../shared_memory/shm.h"
 #include "player_lib.h"
 

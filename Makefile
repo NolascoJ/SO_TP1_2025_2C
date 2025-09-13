@@ -1,7 +1,7 @@
 # Minimal Makefile to build the view app with ncurses
 
 CC := gcc
-CFLAGS := -std=c11 -Wall -Wextra -I./shared_memory -I./utils -I./master -g
+CFLAGS := -std=c11 -Wall -Wextra -I./shared_memory -I./common -I./master -g
 NCURSES_LIB := -lncurses
 
 # Valgrind configuration
@@ -22,10 +22,10 @@ PLAYER2_SRC := player/player2.c
 PLAYER3_SRC := player/player3.c
 SHM_SRC := shared_memory/shm.c
 SHM_OBJ := shared_memory/shm.o
-GAME_CONFIG_SRC := utils/game_config.c
-GAME_CONFIG_OBJ := utils/game_config.o
-SOCKET_UTILS_SRC := utils/socket_utils.c
-SOCKET_UTILS_OBJ := utils/socket_utils.o
+GAME_CONFIG_SRC := common/game_config.c
+GAME_CONFIG_OBJ := common/game_config.o
+SELECT_COMMON_SRC := common/select_utils.c
+SELECT_COMMON_OBJ := common/select_utils.o
 SETUP_SRC := master/setup.c
 SETUP_OBJ := master/setup.o
 
@@ -54,8 +54,8 @@ $(SHM_OBJ): $(SHM_SRC) | $(BIN_DIR)
 $(GAME_CONFIG_OBJ): $(GAME_CONFIG_SRC) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compilar el objeto de socket_utils
-$(SOCKET_UTILS_OBJ): $(SOCKET_UTILS_SRC) | $(BIN_DIR)
+# Compilar el objeto de select_common
+$(SELECT_COMMON_OBJ): $(SELECT_COMMON_SRC) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compilar el objeto de setup
@@ -67,8 +67,8 @@ $(BIN_DIR)/view: $(VIEW_SRC) $(SHM_OBJ) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(VIEW_SRC) $(SHM_OBJ) $(NCURSES_LIB)
 
 # Máster
-$(BIN_DIR)/master: $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ)
+$(BIN_DIR)/master: $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SELECT_COMMON_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $(MASTER_SRC) $(SETUP_OBJ) $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SELECT_COMMON_OBJ)
 
 # Jugador
 $(BIN_DIR)/player: $(PLAYER_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ) | $(BIN_DIR)
@@ -83,7 +83,7 @@ $(BIN_DIR)/player3: $(PLAYER3_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(PLAYER3_SRC) $(PLAYER_LIB_SRC) $(SHM_OBJ)
 
 clean:
-	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SOCKET_UTILS_OBJ) $(SETUP_OBJ) PVS-Studio.log report.tasks compile_commands.json strace_out
+	rm -rf $(BIN_DIR) *.o $(SHM_OBJ) $(GAME_CONFIG_OBJ) $(SELECT_COMMON_OBJ) $(SETUP_OBJ) PVS-Studio.log report.tasks compile_commands.json strace_out
 
 # Valgrind memory leak detection scenarios
 # Each target cleans only its own log prefix before running.

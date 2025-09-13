@@ -1,15 +1,3 @@
-pvs-studio-analyzer analyze -f strace_out -o PVS-Studio.log
-pvs-studio-analyzer trace -- -C gcc make
-pvs-studio-analyzer trace -- -C gcc make
-make clean
-pvs-studio-analyzer trace -- make
-pvs-studio-analyzer analyze -f strace_out -C gcc -o PVS-Studio.log
-which gcc
-pvs-studio-analyzer analyze -f strace_out -C /usr/bin/gcc -o PVS-Studio.log
-pvs-studio-analyzer analyze -f strace_out -C /usr/bin/gcc -o PVS-Studio.log
-grep execve strace_out | grep gcc | head -n 10
-grep execve strace_out | grep gcc | head -n 10
-ls Makefile
 ls
 make clean
 pvs-studio-analyzer trace -o strace_out -- make -B all
@@ -497,4 +485,16 @@ make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./b
 clear
 make
 make run p="./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player ./bin/player" w=15 h=15
+exit
+make clean all
+exit
+make clean all
+git pull
+exit
+make clean 
+make all
+exit
+make clean all
+make run
+make clean all
 exit

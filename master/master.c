@@ -2,21 +2,9 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <semaphore.h>
-#include <string.h>
-#include <time.h>
-#include <fcntl.h>
+
 #include "master.h"
 #include "setup.h"
-#include "../utils/game_state.h"
-#include "../utils/game_sync.h"
-#include "../shared_memory/shm.h"
-#include "../utils/game_config.h"
-#include "../utils/socket_utils.h"
 
 extern char **environ;
 
@@ -337,4 +325,3 @@ void set_game_over(game_sync_t* game_sync_ptr, game_state_t* game_state_ptr) {
     sem_post(&game_sync_ptr->game_state_mutex);
     sem_post(&game_sync_ptr->master_mutex);
 }
-

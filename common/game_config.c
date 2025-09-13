@@ -19,6 +19,7 @@ void print_usage(const char* exe) {
 }
 
 game_config_t parse_arguments(int argc, char* argv[]) {
+
     game_config_t config = {
         .width = DEFAULT_WIDTH,
         .height = DEFAULT_HEIGHT,
@@ -32,11 +33,11 @@ game_config_t parse_arguments(int argc, char* argv[]) {
 
     int opt;
     bool players_path_set = false;
-while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
+    while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
         switch (opt) {
             case 'w':
                 config.width = (unsigned int)atoi(optarg);
-               
+            
                 if (config.width < DEFAULT_WIDTH) {
                     fprintf(stderr, "Error: Width must be at least 10.\n");
                     exit(EXIT_FAILURE);
@@ -44,7 +45,7 @@ while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
                 break;
             case 'h':
                 config.height = (unsigned int)atoi(optarg);
-               
+            
                 if (config.height < DEFAULT_HEIGHT) {
                     fprintf(stderr, "Error: Height must be at least 10.\n");
                     exit(EXIT_FAILURE);
@@ -85,7 +86,7 @@ while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
                     fprintf(stderr, "Error: Player count must be between 1 and 9.\n");
                     exit(EXIT_FAILURE);
                 }
-                optind =optind - 1 + config.player_count;
+                optind = optind - 1 + config.player_count;
                 break;
             case '?':
             default:
@@ -94,7 +95,7 @@ while((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
         }
     }
 
-  //chequeo de que haya algun jugador 
+    // Check if at least one player path is set 
     if (!players_path_set) {
         fprintf(stderr, "Error: At least one player must be specified with -p.\n");
         print_usage(argv[0]);
