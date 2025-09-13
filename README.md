@@ -6,6 +6,14 @@
 
 El proyecto está diseñado como un sistema de múltiples procesos que se comunican a través de memoria compartida y se sincronizan mediante semáforos, siguiendo una arquitectura de `master` (orquestador), `players` (agentes autónomos) y un `view` (visualizador opcional).
 
+### Características Principales
+- **Arquitectura multiproceso**: Cada jugador y el visualizador son procesos independientes
+- **Comunicación por IPC**: Memoria compartida POSIX para el estado del juego  
+- **Sincronización avanzada**: Semáforos para coordinación y patrón lectores-escritores
+- **Múltiples estrategias de IA**: Greedy y Cluster-based con heurísticas avanzadas
+- **Visualización en tiempo real**: Interfaz opcional con ncurses
+- **Análisis de rendimiento**: Integración con Valgrind y strace para debugging
+
 ## 2. Arquitectura del Sistema
 
 El sistema se compone de tres tipos de procesos principales que interactúan de la siguiente manera:
@@ -29,10 +37,9 @@ Cada jugador es un proceso independiente que ejecuta una estrategia de IA para m
     2.  **Identificación**: Descubre su propio índice (`me`) en el array de jugadores del estado global.
     3.  **Ciclo de Juego**: Espera su turno (usando su semáforo personal), implementa un bloqueo de lectura para tomar una "instantánea" del estado del juego, y la pasa a su función `getMove`.
     4.  **Comunicación**: Envía el movimiento decidido (un byte) al `master` a través de su `stdout`, que está redirigido a un pipe.
-*   **Estrategias Individuales (`player1.c`, `player2.c`, `player3.c`)**: La lógica de decisión está encapsulada en la función `getMove`, que es única para cada ejecutable de jugador:
-    *   `player1`: **Greedy**. Estrategia simple que siempre elige moverse a la casilla adyacente con el valor más alto.
-    *   `player2`: **Heurística**. Calcula un "score" para cada movimiento posible, ponderando el valor de la casilla, el potencial de las casillas cercanas (clúster) y una penalización por riesgo de encierro.
-    *   `player3`: **Territorial**. Una IA avanzada basada en una máquina de estados que busca calcular una "región segura", trazar un perímetro y finalmente rellenar el territorio capturado.
+*   **Estrategias Individuales**: La lógica de decisión está encapsulada en la función `getMove`, que es única para cada ejecutable de jugador:
+    *   **`greedy`**: Estrategia simple que siempre elige moverse a la casilla adyacente con el valor más alto.
+    *   **`cluster`**: Estrategia avanzada basada en heurísticas que evalúa clusters de casillas de alto valor, calcula penalizaciones por aislamiento y optimiza el movimiento considerando el valor inmediato, proximidad a clusters y riesgo de encierro.
 
 ### 2.3. Proceso `view`
 
@@ -59,34 +66,62 @@ Es un visualizador opcional basado en `ncurses` que se ejecuta en un terminal.
 
 ## 3. Estructura del Proyecto
 
-*   **`bin/`**: Directorio para los ejecutables compilados.
-*   **`master/`**: Código fuente del proceso master.
-    *   `master.c` y `master.h`: Lógica principal del orquestador.
-    *   `setup.c` y `setup.h`: Funciones para inicializar el estado del juego.
-*   **`player/`**: Código fuente de los jugadores.
-    *   `player_lib.c` y `player_lib.h`: Lógica común compartida por todos los jugadores (conexión a memoria, ciclo de juego, etc.).
-    *   `player1.c`: Implementación de la estrategia *Greedy*.
-    *   `player2.c`: Implementación de la estrategia *Heurística*.
-    *   `player3.c`: Implementación de la estrategia *Territorial*.
-*   **`view/`**: Código fuente del visualizador.
-    *   `view.c` y `view.h`: Lógica de renderizado con `ncurses`.
-*   **`shared_memory/`**: Abstracción para la gestión de memoria compartida POSIX.
-    *   `shm.c` y `shm.h`: Funciones para crear, mapear y destruir segmentos de memoria.
-*   **`common/`**: Módulos de utilidad.
-    *   `game_config.c` y `game_config.h`: Parseo de argumentos de línea de comandos.
-    *   `game_state.h`: Definición de la estructura `game_state_t`.
-    *   `game_sync.h`: Definición de la estructura `game_sync_t`.
-    *   `select_common.c` y `select_common.h`: Funciones helper para `select()`.
-*   **`Makefile`**: Script para compilación, ejecución y tareas de análisis (Valgrind, Strace).
+```
+ChompChamps/
+├── bin/                    # Ejecutables compilados
+│   ├── master             # Proceso orquestador principal
+│   ├── view               # Visualizador con ncurses  
+│   ├── greedy             # Jugador con estrategia greedy
+│   └── cluster            # Jugador con estrategia de clusters
+├── master/                # Código fuente del proceso master
+│   ├── master.c           # Lógica principal del orquestador
+│   ├── master.h           # Definiciones del master
+│   ├── setup.c            # Funciones de inicialización del juego
+│   └── setup.h            # Headers de configuración
+├── player/                # Código fuente de los jugadores
+│   ├── player_lib.c       # Lógica común (conexión, ciclo de juego)
+│   ├── player_lib.h       # Headers de la librería común
+│   ├── greedy_player.c    # Implementación estrategia Greedy
+│   └── cluster_player.c   # Implementación estrategia Cluster-based
+├── view/                  # Código fuente del visualizador
+│   ├── view.c             # Lógica de renderizado con ncurses
+│   └── view.h             # Headers del visualizador
+├── shared_memory/         # Abstracción para memoria compartida POSIX
+│   ├── shm.c              # Funciones de gestión de memoria compartida
+│   └── shm.h              # Headers de memoria compartida
+├── common/                # Módulos de utilidad
+│   ├── game_config.c      # Parseo de argumentos de línea de comandos
+│   ├── game_config.h      # Headers de configuración
+│   ├── game_state.h       # Estructura game_state_t
+│   ├── game_sync.h        # Estructura game_sync_t  
+│   ├── select_utils.c     # Funciones helper para select()
+│   └── select_utils.h     # Headers de select utilities
+├── strace_out/            # Resultados de análisis strace
+├── Dockerfile             # Configuración del entorno de desarrollo
+├── Makefile               # Script de compilación y análisis
+└── README.md              # Esta documentación
+```
 
 ## 4. Manual de Uso
 
-### 4.1. Requisitos
+### 4.1. Requisitos del Sistema
 
-*   `make`
-*   `docker` (para el entorno de compilación y ejecución recomendado)
-*   Librería `ncurses` (incluida en la imagen de Docker)
-*   Un entorno compatible con POSIX (Linux, macOS).
+#### Dependencias Obligatorias
+- **Sistema Operativo**: Linux/macOS (entorno POSIX)
+- **Compilador**: `gcc` con soporte C11
+- **Make**: Para gestión de compilación
+- **Docker**: Para entorno de desarrollo reproducible
+
+#### Dependencias de Librerías  
+- **libncurses-dev**: Para la interfaz gráfica del visualizador
+- **valgrind**: Para análisis de memoria (incluido en Docker)
+- **strace**: Para análisis de llamadas al sistema (incluido en Docker)
+- **bear**: Para generar base de datos de compilación (incluido en Docker)
+
+#### Recursos del Sistema
+- **Memoria**: Mínimo 512MB RAM disponible
+- **Espacio en disco**: ~50MB para código fuente y ejecutables
+- **Terminal**: Compatible con secuencias ANSI para ncurses
 
 ### 4.2. Compilación (Build)
 
@@ -95,22 +130,36 @@ El método recomendado para compilar el proyecto es utilizando el contenedor de 
 
 > El `Dockerfile` incluido en el proyecto construye una imagen personalizada que parte de la imagen base provista por la cátedra (`agodio/itba-so-multi-platform:3.0`). A esta imagen se le añaden herramientas adicionales como `ncurses` (necesaria para el `view`), `valgrind` (para análisis de memoria) y `bear` (para generar una base de datos de compilación, útil para ejecutar PVS-Studio en arquitecturas como Apple Silicon).
 
-**Paso 1: Entrar al contenedor de Docker**
+**Paso 1: Construir y entrar al contenedor de Docker**
 
-No se provee un script `run.sh`, por lo que debes entrar manualmente al contenedor. Ejecuta el siguiente comando en la raíz de tu proyecto:
+```bash
+# Navegar al directorio del proyecto
+cd SO_TP1_2025_2C
 
-```sh
-docker run --rm -v ${PWD}:/app -w /app --security-opt secomp:unconfined -it agodio/itba-so-multi-platform:3.0
+# Entrar al contenedor (monta el directorio actual en /app)
+docker run --rm -v ${PWD}:/app -w /app --security-opt seccomp:unconfined -it agodio/itba-so-multi-platform:3.0
 ```
-*Este comando monta el directorio actual de tu proyecto dentro del contenedor en la carpeta `/app`.*
+
+> **Nota**: El flag `--security-opt seccomp:unconfined` es necesario para el correcto funcionamiento de `strace` y `valgrind`.
 
 **Paso 2: Compilar el proyecto**
 
-Una vez dentro de la terminal del contenedor, ejecuta `make` para compilar todos los binarios:
-```sh
+Dentro del contenedor, ejecuta:
+```bash
 make all
 ```
-Los ejecutables (`master`, `view`, `player`, `player2`, y `player3`) se crearán en el directorio `bin/`.
+
+Esto generará los siguientes ejecutables en `bin/`:
+- `master`: Proceso orquestador principal
+- `view`: Visualizador con ncurses
+- `greedy`: Jugador con estrategia greedy
+- `cluster`: Jugador con estrategia de clusters
+
+**Verificar la compilación:**
+```bash
+ls -la bin/
+# Deberías ver los 4 ejecutables listados arriba
+```
 
 ### 4.3. Ejecución del Juego
 
@@ -132,19 +181,33 @@ El proceso `master` es el punto de entrada para iniciar una partida. Debe ejecut
 
 **Ejemplos de Uso:**
 
-*   **Partida simple (1 jugador con visualizador):**
-    
-    `./bin/master -v ./bin/view -p ./bin/player`
-    
+1. **Partida simple (1 jugador con visualizador):**
+   ```bash
+   ./bin/master -v ./bin/view -p ./bin/greedy
+   ```
 
-*   **Partida compleja (3 jugadores distintos, tablero grande):**
-    
-    `./bin/master -w 20 -h 20 -v ./bin/view -p ./bin/player ./bin/player2 ./bin/player3`
-    
+2. **Partida con 2 estrategias diferentes:**
+   ```bash
+   ./bin/master -v ./bin/view -p ./bin/greedy ./bin/cluster
+   ```
 
-*   **Partida rápida sin visualizador y con timeout corto:**
-    
-    `./bin/master -t 3 -p ./bin/player ./bin/player2`
+3. **Partida en tablero grande (3 jugadores):**
+   ```bash
+   ./bin/master -w 20 -h 20 -v ./bin/view -p ./bin/greedy ./bin/cluster ./bin/greedy
+   ```
+
+4. **Partida rápida sin visualizador:**
+   ```bash
+   ./bin/master -t 3 -p ./bin/greedy ./bin/cluster
+   ```
+
+5. **Máximo número de jugadores (9):**
+   ```bash
+   ./bin/master -w 25 -h 25 -v ./bin/view -p \
+     ./bin/greedy ./bin/cluster ./bin/greedy \
+     ./bin/cluster ./bin/greedy ./bin/cluster \
+     ./bin/greedy ./bin/cluster ./bin/greedy
+   ```
     
 
 ### 4.4. Uso Avanzado del Makefile
@@ -152,28 +215,166 @@ El proceso `master` es el punto de entrada para iniciar una partida. Debe ejecut
 El `Makefile` proporciona targets adicionales para facilitar la ejecución y el análisis del programa.
 
 *   **Ejecución Rápida (`make run`)**:
-    Puedes usar `make run` para lanzar una partida personalizando los parámetros directamente desde la línea de comandos.
+    Puedes usar `make run` para lanzar una partida personalizada con parámetros específicos:
     
-    *   `w`: Ancho del tablero.
-    *   `h`: Alto del tablero.
-    *   `p`: Lista de jugadores (debe ir entre comillas dobles).
+    - `w`: Ancho del tablero
+    - `h`: Alto del tablero  
+    - `p`: Lista de jugadores (debe ir entre comillas dobles)
 
     **Ejemplo:**
+    ```bash
+    make run w=15 h=15 p='"./bin/greedy" "./bin/cluster"'
+    ```
     
-    `make run w=15 h=15 p='"./bin/player2" "./bin/player3"'`
-    
-    Este comando, inicia una partida en un tablero de 15x15 con los jugadores `player2` y `player3`, usando el visualizador y los demás parámetros por defecto.
+    Inicia una partida en un tablero de 15x15 con los jugadores greedy y cluster, usando el visualizador por defecto.
 
 *   **Análisis de Fugas de Memoria con Valgrind**:
-    Para ejecutar una suite completa de pruebas de memoria en diferentes escenarios, utiliza:
+    Para ejecutar una suite completa de pruebas de memoria en diferentes escenarios:
+    ```bash
+    make valgrind
+    ```
     
-    `make valgrind`
-    
-    Los resultados se guardarán en archivos `valgrind_*.log` en la raíz del proyecto. Este comando es un alias para `make valgrind-suite`, que ejecuta una batería de tests exhaustivos.
+    Los resultados se guardarán en archivos `valgrind_*.log`. Para revisar los resultados:
+    ```bash
+    grep -H 'LEAK SUMMARY' valgrind_*.log
+    ```
 
 *   **Análisis de Llamadas al Sistema con Strace**:
-    Para generar resúmenes de las llamadas al sistema que realizan los procesos en diferentes escenarios:
+    Para generar resúmenes de las llamadas al sistema:
+    ```bash
+    make strace-suite
+    ```
     
-    `make strace-suite`
-    
-    Los informes se generarán en el directorio `strace_out/`.
+    Los informes se generarán en el directorio `strace_out/` con nombres como `summary_*.txt`.
+
+*   **Limpieza de Archivos**:
+    ```bash
+    make clean  # Elimina ejecutables y archivos objeto
+    ```
+
+## 5. Estrategias de Jugadores
+
+### 5.1. Greedy Player (`./bin/greedy`)
+**Algoritmo**: Selección voraz de la casilla adyacente con mayor valor.
+
+**Características**:
+- Evalúa las 8 casillas adyacentes (incluye diagonales)
+- Selecciona siempre la de mayor valor inmediato
+- Simple pero efectiva para acumulación rápida de puntos
+- Vulnerable a quedar atrapada en zonas sin salida
+
+**Uso recomendado**: Ideal para tableros pequeños o como baseline de comparación.
+
+### 5.2. Cluster Player (`./bin/cluster`)
+**Algoritmo**: Heurística avanzada basada en clusters de alto valor con penalización por aislamiento.
+
+**Características**:
+- **Valor inmediato**: Considera el valor de la casilla destino
+- **Análisis de clusters**: Evalúa casillas de alto valor en un radio configurable
+- **Penalización por aislamiento**: Evita posiciones con pocas opciones de escape
+- **Modo solo**: Optimización especial cuando es el único jugador activo
+- **Parámetros configurables**:
+  - `ALPHA = 0.8`: Peso para valor de proximidad a clusters
+  - `GAMMA = 1.0`: Coeficiente de penalización por aislamiento  
+  - `CLUSTER_RADIUS = 3`: Radio de evaluación de clusters
+  - `MIN_FREE_CELLS = 2`: Umbral para detección de aislamiento
+
+**Uso recomendado**: Estrategia superior para tableros medianos y grandes, competencias multijugador.
+
+## 6. Troubleshooting
+
+### 6.1. Problemas Comunes
+
+#### Error: "Permission denied" al ejecutar ejecutables
+```bash
+# Solución: Asegúrate de que los ejecutables tengan permisos
+chmod +x bin/*
+```
+
+#### Error: "ncurses not found" durante compilación
+```bash
+# Solución: Instalar libncurses (en el contenedor ya está incluida)
+apt-get update && apt-get install -y libncurses-dev
+```
+
+#### El visualizador no se muestra correctamente
+```bash
+# Verificar variable de entorno TERM
+echo $TERM
+# Si está vacía o incorrecta, configurar:
+export TERM=xterm-256color
+```
+
+#### Procesos zombie o no terminan correctamente
+```bash
+# Matar todos los procesos relacionados
+pkill -f "./bin/master"
+pkill -f "./bin/view" 
+pkill -f "./bin/greedy"
+pkill -f "./bin/cluster"
+
+# Limpiar memoria compartida si persiste
+# (El master debería limpiarla automáticamente)
+```
+
+#### Errores de memoria compartida
+```bash
+# Verificar segmentos de memoria compartida existentes
+ls /dev/shm/
+# Si hay segmentos orphan, eliminarlos manualmente:
+rm /dev/shm/game_state /dev/shm/game_sync
+```
+
+### 6.2. Debug y Análisis
+
+#### Ejecutar con debug de memoria
+```bash
+make valgrind-test-2-mixed-p  # Prueba específica con 2 jugadores
+```
+
+#### Análizar llamadas al sistema
+```bash
+make strace-2p-mixed  # Trace completo de una partida
+```
+
+#### Compilar con símbolos de debug
+```bash
+# Los ejecutables ya incluyen -g por defecto
+gdb ./bin/master
+```
+
+### 6.3. Limitaciones Conocidas
+
+- **Máximo 9 jugadores**: Definido por `MAX_PLAYERS` en `game_state.h`
+- **Tamaño mínimo de tablero**: 10x10 (validación en argumentos)
+- **Dependencia de ncurses**: El visualizador requiere un terminal compatible
+- **Plataforma**: Diseñado para sistemas POSIX (Linux/macOS)
+
+## 7. Desarrollo y Contribución
+
+### 7.1. Agregar una Nueva Estrategia
+
+1. **Crear archivo fuente**: `player/mi_estrategia_player.c`
+2. **Implementar función `getMove`**:
+   ```c
+   int getMove(player_t* player, game_state_t* state, int me) {
+       // Tu lógica aquí
+       // Retornar dirección: 0-7 (N, NE, E, SE, S, SW, W, NW)
+   }
+   ```
+3. **Actualizar Makefile**: Agregar target de compilación
+4. **Compilar**: `make mi_estrategia`
+
+### 7.2. Estructura del Código
+
+- **Separación de responsabilidades**: Lógica común en `player_lib.c`, estrategias individuales en archivos separados
+- **Headers organizados**: Definiciones compartidas en `common/`
+- **Abstracción de memoria**: Todo el manejo de memoria compartida en `shared_memory/`
+- **Configuración centralizada**: Parseo de argumentos en `common/game_config.c`
+
+### 7.3. Estándares de Código
+
+- **C11**: Estándar del lenguaje
+- **Wall -Wextra**: Compilación con warnings habilitados
+- **Documentación**: Comentarios en funciones públicas
+- **PVS-Studio**: Análisis estático de código disponible con `make pvs-test`

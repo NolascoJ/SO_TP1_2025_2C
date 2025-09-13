@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 // Shared player implementation. Each player must define their own getMove() function.
-
 // Shared main function for all players - calls player-specific getMove() implementation.
 
 int main(int argc, char* argv[]) {
@@ -36,13 +35,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int me =getMe(game_state_ptr, game_sync_ptr);
+    int me = getMe(game_state_ptr, game_sync_ptr);
 
     // Handle error case where player is not found
     if (me == -1) {
         cleanup_resources(game_state_ptr, game_sync_ptr, shm_state_size, shm_sync_size, game_state_fd, game_sync_fd);
         return 1;
     }
+
     player_t playerList[9];
     char state_buffer[sizeof(game_state_t) + gameWidth * gameHeight * sizeof(int)];
     game_state_t* state = (game_state_t*)state_buffer;
@@ -98,13 +98,13 @@ int getMe(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr) {
 }
 
 void acquire_read_lock(game_sync_t* game_sync_ptr, int me) {
-    sem_wait(&game_sync_ptr->player_semaphores[me]); // semáforo por jugador
-    sem_wait(&game_sync_ptr->master_mutex); // mutex para evitar inanición del máster
-    sem_post(&game_sync_ptr->master_mutex); // libero mutex
-    sem_wait(&game_sync_ptr->readers_count_mutex); // mutex para la variable readers_count
+    sem_wait(&game_sync_ptr->player_semaphores[me]); 
+    sem_wait(&game_sync_ptr->master_mutex); 
+    sem_post(&game_sync_ptr->master_mutex); 
+    sem_wait(&game_sync_ptr->readers_count_mutex); 
     game_sync_ptr->readers_count++;
     if (game_sync_ptr->readers_count == 1) {
-        sem_wait(&game_sync_ptr->game_state_mutex); // alguien está leyendo, bloquea al máster
+        sem_wait(&game_sync_ptr->game_state_mutex); // Someone is reading, blocks the master
     }
     sem_post(&game_sync_ptr->readers_count_mutex);
 }
@@ -113,7 +113,7 @@ void release_read_lock(game_sync_t* game_sync_ptr) {
     sem_wait(&game_sync_ptr->readers_count_mutex);
     game_sync_ptr->readers_count--;
     if (game_sync_ptr->readers_count == 0) {
-        sem_post(&game_sync_ptr->game_state_mutex); // ya no hay lectores
+        sem_post(&game_sync_ptr->game_state_mutex); // No readers left, allow master to proceed
     }
     sem_post(&game_sync_ptr->readers_count_mutex);
 }

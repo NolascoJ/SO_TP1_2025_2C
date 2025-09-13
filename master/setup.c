@@ -32,7 +32,7 @@ static void init_players(const game_config_t* config, game_state_t* game_state_p
         game_state_ptr->players[i].invalid_moves = 0;
 
 
-         //loopear hasta que encuentre una posición libre
+        // Loop until finding a free position
         unsigned short x, y;
         bool occupied;
         do {

@@ -2,4 +2,5 @@ bin/
 *.pdf
 view/ncurses_test.c
 .vscode
-
+valgrind*
+strace_out/

@@ -35,6 +35,10 @@ int main(int argc, char *argv[]) {
     unsigned int remaining_players = config.player_count;
     time_t last_valid_move_time = time(NULL);
 
+    // Priority algorithm for select() batch processing: when multiple players are ready
+    // in the same select() call, prioritize players who didn't play last turn first,
+    // then players who played last turn, both following round-robin order
+
     char player_activity1[config.player_count];
     char player_activity2[config.player_count];
     for (unsigned int i = 0; i < config.player_count; i++) {
@@ -90,7 +94,6 @@ int main(int argc, char *argv[]) {
         sem_post(&game_sync_ptr->player_semaphores[i]);
     }
 
-    // Wait for any remaining child processes to terminate (view process, etc.)
     while(wait(NULL) > 0) {
         // Continue waiting until no more children
     }
@@ -163,14 +166,13 @@ int check_neighbors(game_state_t* game_state_ptr, int x, int y, int width, int h
     return 0; // No valid neighbors
 }
 
-int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, char move, unsigned int* remaining_players, int rfd[], time_t* last_valid_move_time) {
-    // Check move validity first
+void process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, char move, unsigned int* remaining_players, int rfd[], time_t* last_valid_move_time) {
+
     if (move > 7 || move < 0) {
         game_state_ptr->players[player_idx].invalid_moves++;
-        return 1; // state changed (invalid move counter)
+        return; 
     }
 
-    // Assign width and height once for all subsequent operations
     int width = game_state_ptr->width;
     int height = game_state_ptr->height;
 
@@ -181,13 +183,12 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
     unsigned short curx = game_state_ptr->players[player_idx].x_coord;
     unsigned short cury = game_state_ptr->players[player_idx].y_coord;
 
-    // Check if player has valid neighbors from current position, if not mark as blocked
     if (!check_neighbors(game_state_ptr, (int)curx, (int)cury, width, height, dx, dy)) {
         game_state_ptr->players[player_idx].is_blocked = true;
         (*remaining_players)--;
         close(rfd[player_idx]);
         rfd[player_idx] = -1;
-        return 1; // state changed (player blocked)
+        return;
     }
 
     int move_index = (int)move;
@@ -197,16 +198,15 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
     // Check board boundaries
     if (next_x < 0 || next_x >= width || next_y < 0 || next_y >= height) {
         game_state_ptr->players[player_idx].invalid_moves++;
-        return 1; // state changed (invalid move counter)
+        return;
     }
 
     int idx = next_y * width + next_x;
     int cell_value = game_state_ptr->board_data[idx];
 
-    // Check if cell is valid (positive value)
     if (cell_value <= 0) {
         game_state_ptr->players[player_idx].invalid_moves++;
-        return 1; // state changed (invalid move counter)
+        return;
     }
 
     // Mark the old cell as visited by this player
@@ -230,8 +230,6 @@ int process_player_move(game_state_t* game_state_ptr, unsigned int player_idx, c
         close(rfd[player_idx]);
         rfd[player_idx] = -1;
     }
-
-    return 1;
 }
 
 static void player_order(unsigned int process_order[], unsigned int* process_count, char played_this_turn[], const game_config_t* config, const char played_last_turn[], const int rfd[], const fd_set* readfds, unsigned int round_robin_start_index) {
@@ -273,20 +271,19 @@ void handle_player_inputs(int rfd[], fd_set* readfds, const game_config_t *confi
 
         if (bytes_read > 0) {
             played_this_turn[i] = 1; 
-            int cambios = process_player_move(game_state_ptr, i, c, remaining_players, rfd, last_valid_move_time);
+            process_player_move(game_state_ptr, i, c, remaining_players, rfd, last_valid_move_time);
 
-            if (config->view_path != NULL && cambios) {
+            if (config->view_path != NULL) {
                 sem_post(&game_sync_ptr->master_to_view);
                 sem_wait(&game_sync_ptr->view_to_master);
                 usleep(config->delay * 1000);
             }
             sem_post(&game_sync_ptr->player_semaphores[i]);
         } else {
-            // llegue a EOF
             if (!game_state_ptr->players[i].is_blocked) {
                 (*remaining_players)--;
             }
-            close(rfd[i]); //close EOF
+            close(rfd[i]); 
             rfd[i] = -1;
         }
     }
