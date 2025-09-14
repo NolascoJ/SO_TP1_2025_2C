@@ -2,10 +2,14 @@
 #define GAME_STATE_H
 
 #include <stdbool.h>
-#include <unistd.h> // Para pid_t
+#include <unistd.h>
+#include <sys/types.h>
+
+#define MAX_PLAYERS 9
+#define MAX_NAME_LENGTH 16
 
 typedef struct {
-    char name[16];          
+    char name[MAX_NAME_LENGTH];          
     unsigned int score;     
     unsigned int invalid_moves; 
     unsigned int valid_moves;   
@@ -19,7 +23,7 @@ typedef struct {
     unsigned short width;   
     unsigned short height;  
     unsigned int player_count; 
-    player_t players[9];      
+    player_t players[MAX_PLAYERS];      
     bool game_over;         
     int board_data[];       
 } game_state_t;

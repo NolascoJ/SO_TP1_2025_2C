@@ -1,0 +1,124 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com 
+
+#include "player_lib.h"
+#include <fcntl.h>
+#include <stdlib.h>
+
+// Shared player implementation. Each player must define their own getMove() function.
+// Shared main function for all players - calls player-specific getMove() implementation.
+
+int main(int argc, char* argv[]) {
+
+    if (argc < 3) {
+        return 1;
+    }
+
+    int gameWidth = atoi(argv[1]);
+    int gameHeight = atoi(argv[2]);
+    
+    int game_state_fd, game_sync_fd;
+    game_state_t* game_state_ptr;
+    game_sync_t* game_sync_ptr;
+    
+    const size_t shm_state_size = sizeof(game_state_t) + (gameWidth * gameHeight * sizeof(int));
+    const size_t shm_sync_size = sizeof(game_sync_t);
+
+    game_state_ptr = shm_open_and_map("/game_state", shm_state_size, &game_state_fd, O_RDONLY);
+    if (game_state_ptr == NULL) {
+        return 1;
+    }
+    
+    game_sync_ptr = shm_open_and_map("/game_sync", shm_sync_size, &game_sync_fd, O_RDWR);
+    if (game_sync_ptr == NULL) {
+        cleanup_resources(game_state_ptr, NULL, shm_state_size, 0, game_state_fd, 0);
+        return 1;
+    }
+
+    int me = getMe(game_state_ptr, game_sync_ptr);
+
+    // Handle error case where player is not found
+    if (me == -1) {
+        cleanup_resources(game_state_ptr, game_sync_ptr, shm_state_size, shm_sync_size, game_state_fd, game_sync_fd);
+        return 1;
+    }
+
+    player_t playerList[9];
+    char state_buffer[sizeof(game_state_t) + gameWidth * gameHeight * sizeof(int)];
+    game_state_t* state = (game_state_t*)state_buffer;
+
+    while (true) {
+        acquire_read_lock(game_sync_ptr, me);
+
+        take_snapshot(game_state_ptr, playerList, state, gameWidth, gameHeight);
+
+        // Check termination conditions AFTER acquiring the lock to avoid race conditions
+        if (game_state_ptr->game_over || game_state_ptr->players[me].is_blocked) {
+            release_read_lock(game_sync_ptr);
+            break;
+        }
+
+        release_read_lock(game_sync_ptr);
+
+        int move = getMove(playerList, state, me);
+        write(STDOUT_FILENO, &move, 1);
+
+    }
+
+    cleanup_resources(game_state_ptr, game_sync_ptr, shm_state_size, shm_sync_size, game_state_fd, game_sync_fd);
+    return 0;
+}
+
+void cleanup_resources(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr,
+                      size_t state_size, size_t sync_size, int state_fd, int sync_fd) {
+    if (game_state_ptr) {
+        shm_close(game_state_ptr, state_size, state_fd);
+    }
+    if (game_sync_ptr) {
+        shm_close(game_sync_ptr, sync_size, sync_fd);
+    }
+}
+
+int getMe(game_state_t* game_state_ptr, game_sync_t* game_sync_ptr) {
+    pid_t pid = getpid();
+
+ 
+    sem_wait(&game_sync_ptr->game_state_mutex);
+
+    for (unsigned int i = 0; i < game_state_ptr->player_count; i++) {
+        if (game_state_ptr->players[i].pid == pid) {
+            sem_post(&game_sync_ptr->game_state_mutex);
+            return (int)i; 
+        }
+    }
+
+    sem_post(&game_sync_ptr->game_state_mutex);
+    perror("Player not found in game state - this should not happen!");
+    return -1;  // Return invalid index to indicate error
+}
+
+void acquire_read_lock(game_sync_t* game_sync_ptr, int me) {
+    sem_wait(&game_sync_ptr->player_semaphores[me]); 
+    sem_wait(&game_sync_ptr->master_mutex); 
+    sem_post(&game_sync_ptr->master_mutex); 
+    sem_wait(&game_sync_ptr->readers_count_mutex); 
+    game_sync_ptr->readers_count++;
+    if (game_sync_ptr->readers_count == 1) {
+        sem_wait(&game_sync_ptr->game_state_mutex); // Someone is reading, blocks the master
+    }
+    sem_post(&game_sync_ptr->readers_count_mutex);
+}
+
+void release_read_lock(game_sync_t* game_sync_ptr) {
+    sem_wait(&game_sync_ptr->readers_count_mutex);
+    game_sync_ptr->readers_count--;
+    if (game_sync_ptr->readers_count == 0) {
+        sem_post(&game_sync_ptr->game_state_mutex); // No readers left, allow master to proceed
+    }
+    sem_post(&game_sync_ptr->readers_count_mutex);
+}
+
+void take_snapshot(game_state_t* game_state_ptr, player_t* playerList, game_state_t* state, int gameWidth, int gameHeight) {
+    memcpy(playerList, game_state_ptr->players, sizeof(playerList[0]) * game_state_ptr->player_count);
+    memcpy(state, game_state_ptr, sizeof(game_state_t) + sizeof(int) * gameWidth * gameHeight);
+}
