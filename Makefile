@@ -225,68 +225,6 @@ valgrind-suite: \
 valgrind: valgrind-suite
 	@echo "\n--- 'make valgrind' ran the full Valgrind suite ---"
 
-# -----------------------------
-# strace scenarios and summaries
-# -----------------------------
-strace-prepare:
-	mkdir -p strace_out
-
-strace-1p: all strace-prepare
-	@echo "--- strace: master + view + 1 player (full trace) ---"
-	rm -f strace_out/trace_1p* 
-	TERM=$(TERM) $(STRACE) $(STRACE_FLAGS) -ff -o strace_out/trace_1p \
-		$(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 1 -v $(BIN_DIR)/view -p $(BIN_DIR)/greedy
-	@echo "Trace files: strace_out/trace_1p.*"
-
-strace-2p-same: all strace-prepare
-	@echo "--- strace: master + view + 2 identical players (full trace) ---"
-	rm -f strace_out/trace_2p_same* 
-	TERM=$(TERM) $(STRACE) $(STRACE_FLAGS) -ff -o strace_out/trace_2p_same \
-		$(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 2 -v $(BIN_DIR)/view -p $(BIN_DIR)/greedy $(BIN_DIR)/greedy
-	@echo "Trace files: strace_out/trace_2p_same.*"
-
-strace-2p-mixed: all strace-prepare
-	@echo "--- strace: master + view + 2 different players (full trace) ---"
-	rm -f strace_out/trace_2p_mixed* 
-	TERM=$(TERM) $(STRACE) $(STRACE_FLAGS) -ff -o strace_out/trace_2p_mixed \
-		$(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 2 -v $(BIN_DIR)/view -p $(BIN_DIR)/greedy $(BIN_DIR)/cluster
-	@echo "Trace files: strace_out/trace_2p_mixed.*"
-
-strace-3p-mixed-noview: all strace-prepare
-	@echo "--- strace: 3 players mixed, no view (full trace) ---"
-	rm -f strace_out/trace_3p_mixed_noview* 
-	$(STRACE) $(STRACE_FLAGS) -ff -o strace_out/trace_3p_mixed_noview \
-		$(BIN_DIR)/master -w 18 -h 18 -d 1 -t 5 -s 203 -p $(BIN_DIR)/greedy $(BIN_DIR)/cluster $(BIN_DIR)/greedy
-	@echo "Trace files: strace_out/trace_3p_mixed_noview.*"
-
-# Syscall count summaries (-c): written to strace_out/*.summary.txt
-strace-summary-1p: all strace-prepare
-	@echo "--- strace -c: 1 player with view ---"
-	TERM=$(TERM) $(STRACE) -f -c $(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 1 -v $(BIN_DIR)/view -p $(BIN_DIR)/greedy 2> strace_out/summary_1p.txt
-	@echo "Summary: strace_out/summary_1p.txt"
-
-strace-summary-2p-same: all strace-prepare
-	@echo "--- strace -c: 2 identical players with view ---"
-	TERM=$(TERM) $(STRACE) -f -c $(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 2 -v $(BIN_DIR)/view -p $(BIN_DIR)/greedy $(BIN_DIR)/greedy 2> strace_out/summary_2p_same.txt
-	@echo "Summary: strace_out/summary_2p_same.txt"
-
-strace-summary-2p-mixed: all strace-prepare
-	@echo "--- strace -c: 2 mixed players with view ---"
-	TERM=$(TERM) $(STRACE) -f -c $(BIN_DIR)/master -w 10 -h 10 -d 50 -t 2 -s 2 -v $(BIN_DIR)/view -p $(BIN_DIR)/greedy $(BIN_DIR)/cluster 2> strace_out/summary_2p_mixed.txt
-	@echo "Summary: strace_out/summary_2p_mixed.txt"
-
-strace-summary-3p-mixed-noview: all strace-prepare
-	@echo "--- strace -c: 3 mixed players, no view ---"
-	$(STRACE) -f -c $(BIN_DIR)/master -w 18 -h 18 -d 1 -t 5 -s 203 -p $(BIN_DIR)/greedy $(BIN_DIR)/cluster $(BIN_DIR)/greedy 2> strace_out/summary_3p_mixed_noview.txt
-	@echo "Summary: strace_out/summary_3p_mixed_noview.txt"
-
-strace-suite: \
-	strace-summary-1p \
-	strace-summary-2p-same \
-	strace-summary-2p-mixed \
-	strace-summary-3p-mixed-noview
-	@echo "\n--- strace summary suite completed. Summaries in strace_out/*.txt ---"
-
 # PVS-Studio analysis using bear (recommended for this environment)
 pvs-test:
 	@echo "Running PVS-Studio Analysis with bear..."

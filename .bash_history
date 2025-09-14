@@ -43,3 +43,8 @@ exit
 make strace-suite    
 make clean
 exit
+make pvs-test
+make strace-suite
+exit
+make clean all
+exit

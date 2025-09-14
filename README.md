@@ -2,17 +2,10 @@
 
 ## 1. Descripción General
 
-**ChompChamps** es un juego multijugador por turnos implementado en C sobre un entorno POSIX. El juego consiste en una competencia entre varios jugadores (controlados por IA) para acumular el mayor puntaje posible moviéndose a través de un tablero 2D. Cada casilla del tablero tiene un valor numérico, y los jugadores suman puntos al moverse a una nueva casilla. Las casillas visitadas se consumen y no pueden ser reutilizadas.
+**ChompChamps** es un juego multijugador snake-like implementado en C sobre un entorno POSIX. El juego consiste en una competencia entre varios jugadores (controlados por IA) para acumular el mayor puntaje posible moviéndose a través de un tablero 2D. Cada casilla del tablero tiene un valor numérico, y los jugadores suman puntos al moverse a una nueva casilla. Las casillas visitadas se consumen y no pueden ser reutilizadas.
 
-El proyecto está diseñado como un sistema de múltiples procesos que se comunican a través de memoria compartida y se sincronizan mediante semáforos, siguiendo una arquitectura de `master` (orquestador), `players` (agentes autónomos) y un `view` (visualizador opcional).
+El proyecto está diseñado como un sistema de múltiples procesos que se comunican a través de memoria compartida y se sincronizan mediante semáforos, siguiendo una arquitectura de `master` (orquestador), `players` (jugadores) y un `view` (vista opcional).
 
-### Características Principales
-- **Arquitectura multiproceso**: Cada jugador y el visualizador son procesos independientes
-- **Comunicación por IPC**: Memoria compartida POSIX para el estado del juego  
-- **Sincronización avanzada**: Semáforos para coordinación y patrón lectores-escritores
-- **Múltiples estrategias de IA**: Greedy y Cluster-based con heurísticas avanzadas
-- **Visualización en tiempo real**: Interfaz opcional con ncurses
-- **Análisis de rendimiento**: Integración con Valgrind y strace para debugging
 
 ## 2. Arquitectura del Sistema
 
@@ -35,7 +28,7 @@ Cada jugador es un proceso independiente que ejecuta una estrategia de IA para m
 *   **Arquitectura Común (`player_lib.c`)**: Todos los jugadores comparten una base de código que gestiona:
     1.  **Conexión**: Mapea la memoria compartida (`/game_state` en solo lectura y `/game_sync` en lectura/escritura).
     2.  **Identificación**: Descubre su propio índice (`me`) en el array de jugadores del estado global.
-    3.  **Ciclo de Juego**: Espera su turno (usando su semáforo personal), implementa un bloqueo de lectura para tomar una "instantánea" del estado del juego, y la pasa a su función `getMove`.
+    3.  **Ciclo de Juego**: Espera su turno (usando su semáforo personal), implementa un bloqueo de lectura para tomar una "snapshot" del estado del juego, y la pasa a su función `getMove`.
     4.  **Comunicación**: Envía el movimiento decidido (un byte) al `master` a través de su `stdout`, que está redirigido a un pipe.
 *   **Estrategias Individuales**: La lógica de decisión está encapsulada en la función `getMove`, que es única para cada ejecutable de jugador:
     *   **`greedy`**: Estrategia simple que siempre elige moverse a la casilla adyacente con el valor más alto.
@@ -50,8 +43,7 @@ Es un visualizador opcional basado en `ncurses` que se ejecuta en un terminal.
     1.  Un **marcador** (leaderboard) con el nombre, puntaje y estadísticas de movimientos de cada jugador.
     2.  Una **matriz** que representa el tablero, mostrando la posición de los jugadores y el valor de cada casilla.
 *   **Sincronización**: Una vez que ha terminado de dibujar, avisa al `master` (vía semáforo `view_to_master`) para que el juego pueda continuar.
-*   **Finalización**: Al final del juego, muestra una pantalla de "GAME OVER" con la clasificación final de los jugadores.
-
+*   **Finalización**: Al final del juego, muestra el leaderboard con los resultados finales del juego.
 ### 2.4. Comunicación y Sincronización
 
 *   **Memoria Compartida (IPC)**:
@@ -60,7 +52,7 @@ Es un visualizador opcional basado en `ncurses` que se ejecuta en un terminal.
 *   **Pipes Anónimos**: El `master` crea un pipe para cada `player`. El `stdout` de cada jugador se redirige al extremo de escritura del pipe, permitiendo al `master` leer los movimientos desde el extremo de lectura.
 *   **Semáforos POSIX sin nombre**:
     *   `game_state_mutex`: Controla el acceso de escritura al estado del juego (solo para el `master`) y forma parte del bloqueo lectores-escritores.
-    *   `player_semaphores[]`: Un semáforo por jugador. El `master` lo usa para dar el turno a un jugador específico.
+    *   `player_semaphores[]`: Un semáforo por jugador. El `master` lo usa para permitirle a cada jugador mandar un nuevo movimiento, una vez haya procesado el que ya mandó.
     *   `readers_count_mutex`: Protege la variable `readers_count` que coordina el bloqueo de lectura.
     *   `master_to_view` y `view_to_master`: Sincronizan el dibujado de la interfaz gráfica entre el `master` y el `view`.
 
@@ -107,8 +99,7 @@ ChompChamps/
 ### 4.1. Requisitos del Sistema
 
 #### Dependencias Obligatorias
-- **Sistema Operativo**: Linux/macOS (entorno POSIX)
-- **Compilador**: `gcc` con soporte C11
+- **Compilador**: `gcc` 
 - **Make**: Para gestión de compilación
 - **Docker**: Para entorno de desarrollo reproducible
 
@@ -118,42 +109,38 @@ ChompChamps/
 - **strace**: Para análisis de llamadas al sistema (incluido en Docker)
 - **bear**: Para generar base de datos de compilación (incluido en Docker)
 
-#### Recursos del Sistema
-- **Memoria**: Mínimo 512MB RAM disponible
-- **Espacio en disco**: ~50MB para código fuente y ejecutables
-- **Terminal**: Compatible con secuencias ANSI para ncurses
-
 ### 4.2. Compilación (Build)
 
-El método recomendado para compilar el proyecto es utilizando el contenedor de Docker proporcionado, que asegura un entorno consistente.
+El método recomendado para compilar el proyecto es utilizando la imagen de Docker proporcionada a continuación, que asegura un entorno consistente.
 
+
+> **Nota sobre el Entorno Docker**
 
 > El `Dockerfile` incluido en el proyecto construye una imagen personalizada que parte de la imagen base provista por la cátedra (`agodio/itba-so-multi-platform:3.0`). A esta imagen se le añaden herramientas adicionales como `ncurses` (necesaria para el `view`), `valgrind` (para análisis de memoria) y `bear` (para generar una base de datos de compilación, útil para ejecutar PVS-Studio en arquitecturas como Apple Silicon).
 
-**Paso 1: Construir y entrar al contenedor de Docker**
+**Paso 1: Construir la imagen de Docker**
 
-```bash
-# Navegar al directorio del proyecto
-cd SO_TP1_2025_2C
-
-# Entrar al contenedor (monta el directorio actual en /app)
-docker run --rm -v ${PWD}:/app -w /app --security-opt seccomp:unconfined -it agodio/itba-so-multi-platform:3.0
+Primero, necesitas construir la imagen de Docker a partir del `Dockerfile`. En la raíz del proyecto, ejecuta:
+```sh
+docker build -t chompchamps-env .
 ```
+*Este comando crea una imagen llamada `chompchamps-env` que contiene todas las dependencias necesarias.*
 
-> **Nota**: El flag `--security-opt seccomp:unconfined` es necesario para el correcto funcionamiento de `strace` y `valgrind`.
+**Paso 2: Entrar al contenedor de Docker**
 
-**Paso 2: Compilar el proyecto**
+Una vez construida la imagen, puedes iniciar un contenedor a partir de ella:
+```sh
+docker run --rm -v ${PWD}:/app -w /app --security-opt seccomp:unconfined -it chompchamps-env
+```
+*Este comando monta el directorio actual de tu proyecto dentro del contenedor en la carpeta `/app`.*
 
-Dentro del contenedor, ejecuta:
-```bash
+**Paso 3: Compilar el proyecto**
+
+Una vez dentro de la terminal del contenedor, ejecuta `make` para compilar todos los binarios:
+```sh
 make all
 ```
-
-Esto generará los siguientes ejecutables en `bin/`:
-- `master`: Proceso orquestador principal
-- `view`: Visualizador con ncurses
-- `greedy`: Jugador con estrategia greedy
-- `cluster`: Jugador con estrategia de clusters
+Los ejecutables (`master`, `view`, `player`, `player2`, y `player3`) se crearán en el directorio `bin/`.
 
 **Verificar la compilación:**
 ```bash
@@ -176,7 +163,7 @@ El proceso `master` es el punto de entrada para iniciar una partida. Debe ejecut
 *   **-d `delay`**: Milisegundos que espera el `master` entre turnos si el `view` está activo. Por defecto: `200`.
 *   **-t `timeout`**: Segundos de inactividad de jugadores antes de terminar el juego. Por defecto: `10`.
 *   **-s `semilla`**: Semilla para la generación de números aleatorios del tablero. Por defecto: `time(NULL)`.
-*   **-v `ruta_view`**: Ruta al ejecutable del visualizador. Si no se especifica, el juego corre sin interfaz. Por defecto: `Sin visualizador`.
+*   **-v `ruta_view`**: Ruta al ejecutable del visualizador. Si no se especifica, el juego corre sin interfaz. Por defecto: `Sin vista`.
 *   **-p `jugadores`**: **Obligatorio**. Rutas a los ejecutables de los jugadores (de 1 a 9).
 
 **Ejemplos de Uso:**
@@ -214,20 +201,6 @@ El proceso `master` es el punto de entrada para iniciar una partida. Debe ejecut
 
 El `Makefile` proporciona targets adicionales para facilitar la ejecución y el análisis del programa.
 
-*   **Ejecución Rápida (`make run`)**:
-    Puedes usar `make run` para lanzar una partida personalizada con parámetros específicos:
-    
-    - `w`: Ancho del tablero
-    - `h`: Alto del tablero  
-    - `p`: Lista de jugadores (debe ir entre comillas dobles)
-
-    **Ejemplo:**
-    ```bash
-    make run w=15 h=15 p='"./bin/greedy" "./bin/cluster"'
-    ```
-    
-    Inicia una partida en un tablero de 15x15 con los jugadores greedy y cluster, usando el visualizador por defecto.
-
 *   **Análisis de Fugas de Memoria con Valgrind**:
     Para ejecutar una suite completa de pruebas de memoria en diferentes escenarios:
     ```bash
@@ -239,14 +212,6 @@ El `Makefile` proporciona targets adicionales para facilitar la ejecución y el 
     grep -H 'LEAK SUMMARY' valgrind_*.log
     ```
 
-*   **Análisis de Llamadas al Sistema con Strace**:
-    Para generar resúmenes de las llamadas al sistema:
-    ```bash
-    make strace-suite
-    ```
-    
-    Los informes se generarán en el directorio `strace_out/` con nombres como `summary_*.txt`.
-
 *   **Limpieza de Archivos**:
     ```bash
     make clean  # Elimina ejecutables y archivos objeto
@@ -255,11 +220,10 @@ El `Makefile` proporciona targets adicionales para facilitar la ejecución y el 
 ## 5. Estrategias de Jugadores
 
 ### 5.1. Greedy Player (`./bin/greedy`)
-**Algoritmo**: Selección voraz de la casilla adyacente con mayor valor.
+**Algoritmo**: Se desplaza a la casilla adyacente de mayor valor
 
 **Características**:
-- Evalúa las 8 casillas adyacentes (incluye diagonales)
-- Selecciona siempre la de mayor valor inmediato
+- Evalúa las 8 casillas adyacentes (incluye diagonales)- Selecciona siempre la de mayor valor inmediato
 - Simple pero efectiva para acumulación rápida de puntos
 - Vulnerable a quedar atrapada en zonas sin salida
 
@@ -325,29 +289,11 @@ ls /dev/shm/
 rm /dev/shm/game_state /dev/shm/game_sync
 ```
 
-### 6.2. Debug y Análisis
-
-#### Ejecutar con debug de memoria
-```bash
-make valgrind-test-2-mixed-p  # Prueba específica con 2 jugadores
-```
-
-#### Análizar llamadas al sistema
-```bash
-make strace-2p-mixed  # Trace completo de una partida
-```
-
-#### Compilar con símbolos de debug
-```bash
-# Los ejecutables ya incluyen -g por defecto
-gdb ./bin/master
-```
-
-### 6.3. Limitaciones Conocidas
+### 6.2. Limitaciones Conocidas
 
 - **Máximo 9 jugadores**: Definido por `MAX_PLAYERS` en `game_state.h`
 - **Tamaño mínimo de tablero**: 10x10 (validación en argumentos)
-- **Dependencia de ncurses**: El visualizador requiere un terminal compatible
+- **Dependencia de ncurses**: El view requiere un terminal compatible con ncurses
 - **Plataforma**: Diseñado para sistemas POSIX (Linux/macOS)
 
 ## 7. Desarrollo y Contribución
@@ -374,7 +320,6 @@ gdb ./bin/master
 
 ### 7.3. Estándares de Código
 
-- **C11**: Estándar del lenguaje
 - **Wall -Wextra**: Compilación con warnings habilitados
 - **Documentación**: Comentarios en funciones públicas
 - **PVS-Studio**: Análisis estático de código disponible con `make pvs-test`
