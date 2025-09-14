@@ -3,4 +3,9 @@ bin/
 view/ncurses_test.c
 .vscode
 valgrind*
-strace_out/
+strace_out*
+PVS-Studio.log
+report.tasks
+compile_commands.json
+.bash_history
+.ssh/

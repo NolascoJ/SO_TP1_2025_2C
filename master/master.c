@@ -85,7 +85,19 @@ int main(int argc, char *argv[]) {
     if (config.view_path != NULL) {
             sem_post(&game_sync_ptr->master_to_view);
             sem_wait(&game_sync_ptr->view_to_master);
+    }else {
+        // Print final scores when no view is present
+        printf("\n=== GAME OVER ===\n");
+        printf("Final Scores:\n");
+        for (unsigned int i = 0; i < config.player_count; i++) {
+            printf("Player %u: Score = %u, Valid Moves = %u, Invalid Moves = %u\n", 
+                i, 
+                game_state_ptr->players[i].score,
+                game_state_ptr->players[i].valid_moves,
+                game_state_ptr->players[i].invalid_moves);
         }
+        printf("================\n");
+    }
 
     close_player_pipes(rfd, config.player_count);
 

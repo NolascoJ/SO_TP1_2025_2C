@@ -120,10 +120,19 @@ El método recomendado para compilar el proyecto es utilizando la imagen de Dock
 
 **Paso 1: Construir la imagen de Docker**
 
-Primero, necesitas construir la imagen de Docker a partir del `Dockerfile`. En la raíz del proyecto, ejecuta:
-```sh
-docker build -t chompchamps-env .
-```
+Primero, necesitas construir la imagen de Docker a partir del `Dockerfile`.
+
+> **Nota sobre las credenciales de PVS-Studio:**
+> El `Dockerfile` intentará configurar las credenciales de PVS-Studio si se proporcionan durante la compilación. Si no tienes una licencia de PVS-Studio, puedes omitir los siguientes argumentos y construir la imagen normalmente con `docker build -t chompchamps-env .`.
+> 
+> Si tienes credenciales, puedes pasarlas como argumentos de compilación de la siguiente manera:
+> ```sh
+> docker build -t chompchamps-env \
+>   --build-arg PVS_STUDIO_USER="tu_usuario" \
+>   --build-arg PVS_STUDIO_KEY="tu_clave" \
+>   .
+> ```
+
 *Este comando crea una imagen llamada `chompchamps-env` que contiene todas las dependencias necesarias.*
 
 **Paso 2: Entrar al contenedor de Docker**
