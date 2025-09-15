@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
         printf("Final Scores:\n");
         for (unsigned int i = 0; i < config.player_count; i++) {
             printf("Player %u: Score = %u, Valid Moves = %u, Invalid Moves = %u\n", 
-                i, 
+                i + 1, 
                 game_state_ptr->players[i].score,
                 game_state_ptr->players[i].valid_moves,
                 game_state_ptr->players[i].invalid_moves);

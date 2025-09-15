@@ -291,6 +291,8 @@ pkill -f "./bin/cluster"
 ```
 
 #### Errores de memoria compartida
+
+Suelen ocurrir si se termina el programa con Ctrl + c o si termina inesperadamente.
 ```bash
 # Verificar segmentos de memoria compartida existentes
 ls /dev/shm/
