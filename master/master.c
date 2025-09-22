@@ -131,6 +131,9 @@ void create_players(int rfd[], const game_config_t *config, game_state_t *game_s
         pid_t pid = fork();
         if (pid == 0) { // Child process
             close(pipe_fd[0]);
+            for (unsigned int j = 0; j < i; j++) {
+                close(rfd[j]);
+            }
             dup2(pipe_fd[1], STDOUT_FILENO);
             close(pipe_fd[1]);
 
